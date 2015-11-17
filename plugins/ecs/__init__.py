@@ -194,7 +194,8 @@ def main(text):
 					    		    'short': True
 					   			}, {
 					   				'title': 'Updated At',
-					   				'value': service['deployments'][0]['updatedAt'],
+					   				'value': service['deployments'][0]['updatedAt'].strftime("%Y-%m-%d %H:%M %z")
+					   				,
 					   				'short': True
 					   			}, {
 					   		 		'title': 'CPU Reservation',

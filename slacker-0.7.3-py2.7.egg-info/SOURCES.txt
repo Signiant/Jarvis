@@ -1,0 +1,10 @@
+README.rst
+setup.cfg
+setup.py
+slacker/__init__.py
+slacker/utils.py
+slacker.egg-info/PKG-INFO
+slacker.egg-info/SOURCES.txt
+slacker.egg-info/dependency_links.txt
+slacker.egg-info/requires.txt
+slacker.egg-info/top_level.txt

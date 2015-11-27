@@ -1,21 +1,17 @@
 import imp
 import os
 from collections import defaultdict
-from slacker import Slacker
-import json
+import requests
+import urllib
 
 pluginFolder = "./plugins"
 mainFile = "__init__"
 
-with open(os.path.join(os.path.dirname(__file__), 'SLACK_BOT_API_TOKEN')) as f:
-    bot_api_token = f.read().strip()
 with open(os.path.join(os.path.dirname(__file__), 'SLACK_TEAM_TOKEN')) as f:
     incoming_token = f.read().strip()
 
-slack = Slacker(bot_api_token)
 slack_channel = '#general'
-slack_bot_name="Jarvis"
-as_user = True
+slack_response_url = None
 
 def getAllPlugins():
     plugins = []
@@ -44,17 +40,25 @@ def lambda_handler(event, context):
 
     param_map = _formparams_to_dict(event['formparams'])
     text = param_map['text'].split('+')
+
     global slack_channel 
-    slack_channel = '#{}'.format(param_map['channel_name'])
+    slack_channel = param_map['channel_id']
     retval = None
+
+    global slack_response_url
+    slack_response_url = param_map['response_url']
+    slack_response_url = urllib.unquote(slack_response_url)
+
+    print "LOG: The request came from: " + slack_channel
+    print "LOG: The request is: " + str(text)
 
     if param_map['token'] != incoming_token:  # Check for a valid Slack token
         retval = 'invalid incoming Slack token'
 
-    elif text[1] == 'help':
+    elif text[0] == 'help':
         if len(text) > 2:
             try:
-                plugin = loadPlugin(text[2])
+                plugin = loadPlugin(text[1])
                 retval = plugin.information()
             except Exception as e:
                 retval = "I'm afraid I did not understand that command. Use 'jarvis help' for available commands."
@@ -68,23 +72,26 @@ def lambda_handler(event, context):
 
     else:
         try:
-            plugin = loadPlugin(text[1])
-
+            plugin = loadPlugin(text[0])
             retval = plugin.main(text)
         except Exception as e:
             retval = "I'm afraid I did not understand that command. Use 'jarvis help' for available commands."
             print 'Error: ' + format(str(e))
 
-    if isinstance(retval, basestring):
-        post_slack_message(retval)
+    post_to_slack(retval, " ".join(text))
+    
+def post_to_slack(val):
+
+    if isinstance(val, basestring):
+        payload = {
+        "text": val,
+        "response_type": "ephemeral"
+        }
+
+        r = requests.post(slack_response_url, json=payload)
     else:
-        post_slack_attachment(retval)
-
-def post_slack_attachment(attachment):
-    #print attachment
-    slack.chat.post_message(slack_channel, "", username=slack_bot_name, attachments=json.dumps(attachment), as_user=as_user)
-
-
-def post_slack_message(text):
-    #print text
-    slack.chat.post_message(slack_channel, text, username=slack_bot_name, as_user=as_user)
+        payload = {
+        "attachments": val,
+        "response_type": "ephemeral"
+        }
+        r = requests.post(slack_response_url, json=payload)

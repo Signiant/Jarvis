@@ -2,17 +2,40 @@ import boto3
 import json
 import re
 import math
+import os.path
 from datetime import *
+import common
 
-session = boto3.session.Session()
+
 
 def main(text):
 	regionList = ['us-east-1', 'us-west-1', 'us-west-2', 'eu-west-1', 'ap-northeast-1', 'ap-southeast-2']
 	region = regionList[0]
 	cluster = ""
 	ret = ""
-	text.pop(0) # remove bot name
+	
 	text.pop(0) # remove command name
+
+	awsKeyId = None
+	awsSecretKey = None
+	awsSessionToken = None
+
+	if os.path.isfile("./aws.config"):
+	  with open("aws.config") as f:
+	    accounts = json.load(f)
+	    for account in accounts['accounts']:
+	    	if account['AccountName'] in text:
+	    		text.remove(account['AccountName'])
+	    		sts_client = boto3.client('sts')
+	    		assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'], RoleSessionName="AssumedRole")
+	    		awsKeyId = assumedRole['Credentials']['AccessKeyId']
+	    		awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
+	    		awsSessionToken = assumedRole['Credentials']['SessionToken']
+
+
+	session = boto3.session.Session(aws_access_key_id=awsKeyId, aws_secret_access_key=awsSecretKey, aws_session_token=awsSessionToken)
+
+
 	extractedRegion = re.search(r'[a-z]{2}-[a-z]+-[1-9]{1}', " ".join(text))
 	if extractedRegion:
 		region = extractedRegion.group()
@@ -81,12 +104,17 @@ def main(text):
 			return attachments
 
 	elif 'describe' in text:
-		cw = session.client('cloudwatch')
+		cw = session.client('cloudwatch', region_name=region)
 		text.remove("describe")
-		ret = ""
+		createGraph = False
+
+		if "graph" in text:
+			text.remove("graph")
+			createGraph = True
+
 		if len(text) == 1:
 			clustername = text[0]
-
+			
 			clusters = ecs.describe_clusters(clusters=[clustername])
 
 			if clusters['failures']:
@@ -94,51 +122,46 @@ def main(text):
 
 			attachments = []
 
-			year = datetime.today().year
-			month = datetime.today().month
-			day = datetime.today().day
-			hour = datetime.today().hour
-			minute = datetime.today().minute
-
 			clustercpu = cw.get_metric_statistics(	Namespace="AWS/ECS", 
 													MetricName="CPUUtilization", 
 													Dimensions=[{'Name': 'ClusterName', 'Value': clustername}],
-													StartTime=datetime(year, month, day, hour, minute-5),
-													EndTime=datetime(year, month, day, hour, minute),
-													Period=300,
+													StartTime=datetime.today() - timedelta(days=1),
+													EndTime=datetime.today(),
+													Period=1800,
 													Statistics=['Average'],
 													Unit='Percent')
 
 			clustermem = cw.get_metric_statistics(	Namespace="AWS/ECS", 
 													MetricName="MemoryUtilization", 
 													Dimensions=[{'Name': 'ClusterName', 'Value': clustername}],
-													StartTime=datetime(year, month, day, hour, minute-5),
-													EndTime=datetime(year, month, day, hour, minute),
-													Period=300,
+													StartTime=datetime.utcnow() - timedelta(days=1),
+													EndTime=datetime.utcnow(),
+													Period=1800,
 													Statistics=['Average'],
 													Unit='Percent')
 
-			clustercpu = math.ceil(clustercpu['Datapoints'][0]['Average'])
+			cpudata = []
+			memdata = []
+
+			for datapoint in clustercpu['Datapoints']:
+				cpudata.append([datapoint['Timestamp'], datapoint['Average']])
+
+			for datapoint in clustermem['Datapoints']:
+				memdata.append([datapoint['Timestamp'], datapoint['Average']])
+
+			cpudata = sorted(cpudata, key=lambda x: x[0])
+			memdata = sorted(memdata, key=lambda x: x[0])
+
+			clustercpu = math.ceil(cpudata[0][1])
 			clustercpu = int(clustercpu)
-			clustermem = math.ceil(clustermem['Datapoints'][0]['Average'])
+			clustermem = math.ceil(memdata[0][1])
 			clustermem = int(clustermem)
 
 			clusters = clusters['clusters'][0]
 
-			attachments.append({
-					'fallback': 'Cluster: ' + clusters['clusterName'],
-					'title': 'Cluster ' + clusters['clusterName'],
-					'fields': [{
+			fields = [{
 						'title': 'Registered Instances',
 						'value': clusters['registeredContainerInstancesCount'],
-						'short': True
-					}, {
-						'title': 'CPU Usage',
-						'value': str(clustercpu) + "%",
-						'short': True
-					}, {
-						'title': 'Memory Usage',
-						'value': str(clustermem) + "%",
 						'short': True
 					}, {
 						'title': 'Active Services',
@@ -152,12 +175,37 @@ def main(text):
 						'title': 'Pending Tasks',
 						'value': clusters['pendingTasksCount'],
 						'short': True
-					}],
+					}]
+
+			if not createGraph:
+				fields.append({
+						'title': 'Memory Usage',
+						'value': str(clustermem) + "%",
+						'short': True
+					})
+				fields.append({
+						'title': 'CPU Usage',
+						'value': str(clustercpu) + "%",
+						'short': True
+					})
+
+			attachments.append({
+					'fallback': 'Cluster: ' + clusters['clusterName'],
+					'title': 'Cluster ' + clusters['clusterName'],
+					'fields': fields,
 					'color': 'good'
 				})
+
+			if createGraph:
+				attachments.append(common.create_graph('Graphing Cluster CPU and Memory Usage over 1 day', 
+					'Cluster CPU', [i[1] for i in cpudata], 
+					'Cluster Memory', [i[1] for i in memdata], 
+					[i[0].strftime("%I%M") for i in cpudata]))
+
 			return attachments
 		elif len(text) == 2:
 			attachments = []
+
 			if len(text) < 2:
 				return """I need a cluster name and a service name to complete the requested operation. 
 				To view the cluster names, use 'jarvis ecs list clusters <region>'
@@ -165,6 +213,8 @@ def main(text):
 
 			matched = False
 			matchedCount = 0
+			servicename = text[0]
+			clustername = text[1]
 			try:
 				services = ecs.list_services(cluster=text[1])['serviceArns']
 			except Exception as e:
@@ -223,11 +273,52 @@ def main(text):
 								'color': 'warning'
 					})
 			if matched:
+				if createGraph:
+
+					servicecpu = cw.get_metric_statistics(	Namespace="AWS/ECS", 
+												MetricName="CPUUtilization", 
+												Dimensions=[{'Name': 'ClusterName', 'Value': clustername}, {'Name': 'ServiceName', 'Value': servicename}],
+												StartTime=datetime.today() - timedelta(days=1),
+												EndTime=datetime.today(),
+												Period=1800,
+												Statistics=['Average'],
+												Unit='Percent')
+
+					cpudata = []
+
+					for datapoint in servicecpu['Datapoints']:
+						cpudata.append([datapoint['Timestamp'], datapoint['Average']])
+
+					servicemem = cw.get_metric_statistics(	Namespace="AWS/ECS", 
+												MetricName="MemoryUtilization", 
+												Dimensions=[{'Name': 'ClusterName', 'Value': clustername}, {'Name': 'ServiceName', 'Value': servicename}],
+												StartTime=datetime.today() - timedelta(days=1),
+												EndTime=datetime.today(),
+												Period=1800,
+												Statistics=['Average'],
+												Unit='Percent')
+
+					memdata = []
+
+					for datapoint in servicemem['Datapoints']:
+						memdata.append([datapoint['Timestamp'], datapoint['Average']])
+
+
+					memdata = sorted(memdata, key=lambda x: x[0])
+					cpudata = sorted(cpudata, key=lambda x: x[0])
+
+					attachments.append(common.create_graph("Graphing Service CPU and Memory Usage over 1 day",
+						'Service CPU', 
+						[i[1] for i in cpudata], 
+						'Service Memory', 
+						[i[1] for i in memdata], 
+						[i[0].strftime("%I%M") for i in cpudata]))
+
 				return attachments
 			else:
 				return "Could not find any services that include " + text[0]
-		else:
-			return "I did not understand the query. Please try again."
+	else:
+		return "I did not understand the query. Please try again."
 
 def about():
 	return "This plugin returns requested information regarding AWS EC2 Container Service"

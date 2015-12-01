@@ -12,7 +12,7 @@ with open(os.path.join(os.path.dirname(__file__), 'SLACK_TEAM_TOKEN')) as f:
 
 slack_channel = '#general'
 slack_response_url = None
-
+query = None
 def getAllPlugins():
     plugins = []
     possibleplugins = os.listdir(pluginFolder)
@@ -40,7 +40,8 @@ def lambda_handler(event, context):
 
     param_map = _formparams_to_dict(event['formparams'])
     text = param_map['text'].split('+')
-
+    global query
+    query = " ".join(text)
     global slack_channel 
     slack_channel = param_map['channel_id']
     retval = None
@@ -51,12 +52,13 @@ def lambda_handler(event, context):
 
     print "LOG: The request came from: " + slack_channel
     print "LOG: The request is: " + str(text)
+    print "LOG: The requesting user is: " + param_map['user_name']
 
     if param_map['token'] != incoming_token:  # Check for a valid Slack token
         retval = 'invalid incoming Slack token'
 
     elif text[0] == 'help':
-        if len(text) > 2:
+        if len(text) > 1:
             try:
                 plugin = loadPlugin(text[1])
                 retval = plugin.information()
@@ -78,20 +80,23 @@ def lambda_handler(event, context):
             retval = "I'm afraid I did not understand that command. Use 'jarvis help' for available commands."
             print 'Error: ' + format(str(e))
 
-    post_to_slack(retval, " ".join(text))
+    post_to_slack(retval)
     
 def post_to_slack(val):
 
     if isinstance(val, basestring):
         payload = {
-        "text": val,
+        "text": query + "\n" + val,
         "response_type": "ephemeral"
         }
 
         r = requests.post(slack_response_url, json=payload)
+        #print payload
     else:
         payload = {
+        "text": query,
         "attachments": val,
         "response_type": "ephemeral"
         }
         r = requests.post(slack_response_url, json=payload)
+        #print payload

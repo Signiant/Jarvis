@@ -48,11 +48,11 @@ Navigate to your created API Gateway entry for the Lambda function. Open the POS
 **This step turns the incoming request into a string within a json object that we can parse later on**
 
 Under **Mapping Templates**, add a new entry that has *Content-Type* set to *application/x-www-form-urlencoded* then edit the mapping template to include:
-```json
+``
 {
     "formparams": $input.json("$")
 }
-```
+``
 
 **The following steps are done to stop slackbot from posting a 'null' message whenever a slash command is issued for this function**
 
@@ -75,5 +75,13 @@ Deploy your API when ready. Copy the URL shown to you. You will need that to set
 ### Slack
 
 You will also need to configure your slash command on Slack to post the information to your API Gateway URL.
+
+Go to *Configure Integrations* on your slack team then choose *Configured Integrations*
+
+Find *Slash Commands* in the list presented to you, then choose *Add*
+
+Set a command that you want to use to call Jarvis (ex. /jarvis) and set the URL to the previously copied URL from API Gateway
+
+Set the *Method* to `POST` and finish by customizing the bot's name and icon.
 
 Once that is done, issuing "/jarvis help" will display the available commands

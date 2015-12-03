@@ -23,7 +23,7 @@ def main(text):
 	if os.path.isfile("./aws.config"):
 	  with open("aws.config") as f:
 	    accounts = json.load(f)
-	    for account in accounts['accounts']:
+	    for account in accounts['Accounts']:
 	    	if account['AccountName'] in text:
 	    		text.remove(account['AccountName'])
 	    		sts_client = boto3.client('sts')

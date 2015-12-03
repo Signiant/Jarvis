@@ -37,7 +37,6 @@ def _formparams_to_dict(s1):
 
 def lambda_handler(event, context):
     # Lambda entry point
-
     param_map = _formparams_to_dict(event['formparams'])
     text = param_map['text'].split('+')
     global query
@@ -91,7 +90,6 @@ def post_to_slack(val):
         }
 
         r = requests.post(slack_response_url, json=payload)
-        #print payload
     else:
         payload = {
         "text": query,
@@ -99,4 +97,3 @@ def post_to_slack(val):
         "response_type": "ephemeral"
         }
         r = requests.post(slack_response_url, json=payload)
-        #print payload

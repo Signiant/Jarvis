@@ -4,7 +4,7 @@ import re
 import math
 import os.path
 from datetime import *
-#import common
+import common
 
 
 
@@ -19,19 +19,24 @@ def main(text):
 	awsKeyId = None
 	awsSecretKey = None
 	awsSessionToken = None
-
+	loadedApplications = None
 	if os.path.isfile("./aws.config"):
-	  with open("aws.config") as f:
-	    accounts = json.load(f)
-	    for account in accounts['Accounts']:
-	    	if account['AccountName'] in text:
-	    		text.remove(account['AccountName'])
-	    		sts_client = boto3.client('sts')
-	    		assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'], RoleSessionName="AssumedRole")
-	    		awsKeyId = assumedRole['Credentials']['AccessKeyId']
-	    		awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
-	    		awsSessionToken = assumedRole['Credentials']['SessionToken']
+		with open("aws.config") as f:
+			accounts = json.load(f)
 
+		if accounts.get('Applications'):
+			loadedApplications = accounts['Applications']
+		for account in accounts['Accounts']:
+			if account['AccountName'] in text:
+				text.remove(account['AccountName'])
+				sts_client = boto3.client('sts')
+				assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'], RoleSessionName="AssumedRole")
+				awsKeyId = assumedRole['Credentials']['AccessKeyId']
+				awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
+				awsSessionToken = assumedRole['Credentials']['SessionToken']
+				# Load application settings for this account
+				if account.get('Applications'):
+					loadedApplications = account['Applications']
 
 	session = boto3.session.Session(aws_access_key_id=awsKeyId, aws_secret_access_key=awsSecretKey, aws_session_token=awsSessionToken)
 
@@ -82,37 +87,35 @@ def main(text):
 
 			fields = []
 			activeLoadBalancer = None
-			if application != None and os.path.isfile("./aws.config"):
-				with open("aws.config") as f:
-					applications = json.load(f)
-					for app in applications['Applications'][region]:
-						if app['ApplicationName'] == application:
-							r = session.client('route53', region_name=region)
-							records = r.list_resource_record_sets(HostedZoneId=app['HostedZoneId'], StartRecordName=app['DNSRecord'], StartRecordType='A')
+			if application != None and loadedApplications != None:
+				for app in loadedApplications[region]:
+					if app['ApplicationName'] == application:
+						r = session.client('route53', region_name=region)
+						records = r.list_resource_record_sets(HostedZoneId=app['HostedZoneId'], StartRecordName=app['DNSRecord'], StartRecordType='A')
 							
-							activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
+						activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
 			for env in environments:
 				live = ""
 				if activeLoadBalancer != None :
 					if env['EndpointURL'].lower() in activeLoadBalancer.lower():
-						live = ":white_check_mark:"
+						live = ":live-environment:"
 				status = ":healthy-environment:"
 				health = env['Health']
 				if health == 'Yellow':
-					status = ":yellow_heart:"
+					status = ":unstable-environment:"
 				elif health == "Red":
-					status = ":unhealthy-environment:"
+					status = ":failing-environment:"
 				else:
 					if env['Status'] == "Launching":
 						status = ":rocket:"
 					elif env['Status'] == "Updating":
-						status = ":arrows_counterclockwise:"
+						status = ":updating-environment:"
 					elif env['Status'] == "Terminating":
 						status = ":warning:"
 					elif env['Status'] == "Terminated":
 						status = ":x:"
 				fields.append({
-						'title': env['EnvironmentName'] + " " + status + " " + live,
+						'title': status + " " + env['EnvironmentName'] + " " + live,
 						'value': 'Version: ' + env['VersionLabel'],
 						'short': True
 					})
@@ -130,9 +133,10 @@ def main(text):
 		attachments = []
 		if 'application' in text:
 			text.remove('application')
+			application = " ".join(text)
 			environments = []
 			try:
-				environments = eb.describe_environments(ApplicationName=" ".join(text))['Environments']
+				environments = eb.describe_environments(ApplicationName=application)['Environments']
 			except Exception as e:
 				print e
 				return "Could not describe "+ " ".join(text) + " in " + region
@@ -140,10 +144,37 @@ def main(text):
 				return "There are no beanstalk environments in this application: " + " ".join(text)
 
 			fields = []
+			activeLoadBalancer = None
+			if application != None and loadedApplications != None:
+				for app in loadedApplications[region]:
+					if app['ApplicationName'] == application:
+						r = session.client('route53', region_name=region)
+						records = r.list_resource_record_sets(HostedZoneId=app['HostedZoneId'], StartRecordName=app['DNSRecord'], StartRecordType='A')
+							
+						activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
+
 			for env in environments:
- 			
+ 				live = ""
+				if activeLoadBalancer != None :
+					if env['EndpointURL'].lower() in activeLoadBalancer.lower():
+						live = ":live-environment:"
+				status = ":healthy-environment:"
+				health = env['Health']
+				if health == 'Yellow':
+					status = ":unstable-environment:"
+				elif health == "Red":
+					status = ":failing-environment:"
+				else:
+					if env['Status'] == "Launching":
+						status = ":rocket:"
+					elif env['Status'] == "Updating":
+						status = ":updating-environment:"
+					elif env['Status'] == "Terminating":
+						status = ":warning:"
+					elif env['Status'] == "Terminated":
+						status = ":x:"
 				fields.append({
-						'title': env['EnvironmentName'],
+						'title': status + " " + env['EnvironmentName'] + " "  + live,
 						'value': 'Version: ' + env['VersionLabel'],
 						'short': True
 					})
@@ -159,6 +190,14 @@ def main(text):
 		elif 'environment' in text:
 			text.remove("environment")
 			environment = text.pop(0)
+			graph = False
+			graphType = None
+			if 'graph' in text:
+				graph = True
+				print len(text)
+				print text.index('graph')
+				if len(text) > text.index('graph') + 1:
+					graphType = text[text.index('graph') + 1]
 
 			attachments = []
 			environments = []
@@ -172,9 +211,13 @@ def main(text):
 										MaxRecords=5, 
 										Severity="WARN",
 										StartTime=datetime.today() - timedelta(days=1))['Events']
-			instances = eb.describe_environment_resources(EnvironmentName=environment)['EnvironmentResources']['Instances']
+			resources = eb.describe_environment_resources(EnvironmentName=environment)['EnvironmentResources']
+			instances = resources['Instances']
+			loadBalancerName = None
+			if len(resources['LoadBalancers']) > 0:
+				loadBalancerName = resources['LoadBalancers'][0]['Name']
 			fields = []
-			
+		
 			version = description['VersionLabel']
 			runningInstances = len(instances)
 			fields.append({
@@ -223,10 +266,50 @@ def main(text):
 
 			attachments.append({
 					'fallback': 'Environment List',
-					'title':  environment + " " + status,
+					'title':  status + " " + environment,
 					'fields': fields,
 					'color': 'good'
 				})
+
+			if graph != False and loadBalancerName != None:
+				cw = session.client('cloudwatch', region_name=region)
+				reqdata = []
+				latdata = []
+				timedata = None
+				if graphType == None or graphType == 'requests':
+					envrequests = cw.get_metric_statistics(	Namespace="AWS/ELB", 
+															MetricName="RequestCount", 
+															Dimensions=[{'Name': 'LoadBalancerName', 'Value': loadBalancerName}],
+															StartTime=datetime.today() - timedelta(days=1),
+															EndTime=datetime.today(),
+															Period=1800,
+															Statistics=['Sum'],
+															Unit='Count')
+					for datapoint in envrequests['Datapoints']:
+						reqdata.append([datapoint['Timestamp'], datapoint['Sum']])
+					reqdata = sorted(reqdata, key=lambda x: x[0])
+					timedata = [i[0].strftime("%I%M") for i in reqdata]
+
+				if graphType == None or graphType == 'latency':
+					envlatency = cw.get_metric_statistics(	Namespace="AWS/ELB", 
+															MetricName="Latency", 
+															Dimensions=[{'Name': 'LoadBalancerName', 'Value': loadBalancerName}],
+															StartTime=datetime.utcnow() - timedelta(days=1),
+															EndTime=datetime.utcnow(),
+															Period=1800,
+															Statistics=['Average'],
+															Unit='Seconds')
+					for datapoint in envlatency['Datapoints']:
+						latdata.append([datapoint['Timestamp'], datapoint['Average']])
+					latdata = sorted(latdata, key=lambda x: x[0])
+					if timedata == None:
+						timedata = [i[0].strftime("%I%M") for i in latdata]
+
+				attachments.append(common.create_graph('Graphing Environment Requests and Layency over 1 day', 
+						'Requests (Count)', [i[1] for i in reqdata], 
+						'Latency (Seconds)', [i[1] for i in latdata], 
+						timedata))
+
 			return attachments 
 	else:
 		return "I did not understand the query. Please try again."
@@ -239,5 +322,5 @@ def information():
 	The format of queries is as follows:
 	jarvis eb list applications <region>
 	jarvis eb list environments <application> <region>
-	jarvis eb describe <application> <region>
-	jarvis ecs describe <environment> <application> <region> """
+	jarvis eb describe application <application> <region>
+	jarvis eb describe environment <environment> <application> <region> [graph] [latency|memory] """

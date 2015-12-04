@@ -305,7 +305,7 @@ def main(text):
 					if timedata == None:
 						timedata = [i[0].strftime("%I%M") for i in latdata]
 
-				attachments.append(common.create_graph('Graphing Environment Requests and Layency over 1 day', 
+				attachments.append(common.create_graph('Graphing Environment Requests and Latency over 1 day', 
 						'Requests (Count)', [i[1] for i in reqdata], 
 						'Latency (Seconds)', [i[1] for i in latdata], 
 						timedata))

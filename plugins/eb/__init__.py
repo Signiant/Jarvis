@@ -11,42 +11,55 @@ import common
 def main(text):
 	regionList = ['us-east-1', 'us-west-1', 'us-west-2', 'eu-west-1', 'ap-northeast-1', 'ap-southeast-2']
 	region = regionList[0]
-	cluster = ""
-	ret = ""
 	
 	text.pop(0) # remove command name
+	if len(text) == 0:
+		return "You did not supply a query to run"
+	if text[0] == 'help':
+		return information()
 
 	awsKeyId = None
 	awsSecretKey = None
 	awsSessionToken = None
 	loadedApplications = None
+	tokens = []
+	config = None
 	if os.path.isfile("./aws.config"):
 		with open("aws.config") as f:
-			accounts = json.load(f)
+			config = json.load(f)
+		if config.get('Applications'):
+			loadedApplications = config['Applications']
 
-		if accounts.get('Applications'):
-			loadedApplications = accounts['Applications']
-		for account in accounts['Accounts']:
-			if account['AccountName'] in text:
-				text.remove(account['AccountName'])
-				sts_client = boto3.client('sts')
-				assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'], RoleSessionName="AssumedRole")
-				awsKeyId = assumedRole['Credentials']['AccessKeyId']
-				awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
-				awsSessionToken = assumedRole['Credentials']['SessionToken']
-				# Load application settings for this account
-				if account.get('Applications'):
-					loadedApplications = account['Applications']
+	if 'in' in text:
+		while text[-1] != 'in':
+			tokens.append(text.pop())
+		extractedRegion = re.search(r'[a-z]{2}-[a-z]+-[1-9]{1}', " ".join(tokens))
+		if extractedRegion:
+			region = extractedRegion.group()
+			tokens.remove(region)
+		text.remove('in')
+
+	if len(tokens) > 0 and config != None:
+			for account in config['Accounts']:
+				if account['AccountName'] in tokens:
+					tokens.remove(account['AccountName'])
+					sts_client = boto3.client('sts')
+					assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'], RoleSessionName="AssumedRole")
+					awsKeyId = assumedRole['Credentials']['AccessKeyId']
+					awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
+					awsSessionToken = assumedRole['Credentials']['SessionToken']
+					# Load application settings for this account
+					if account.get('Applications'):
+						loadedApplications = account['Applications']
+			if len(tokens) > 0:
+				return "Could not resolve " + " ".join(tokens)
+	elif len(tokens) > 0:
+		return "Could not locate aws.config file"
 
 	session = boto3.session.Session(aws_access_key_id=awsKeyId, aws_secret_access_key=awsSecretKey, aws_session_token=awsSessionToken)
 
-
-	extractedRegion = re.search(r'[a-z]{2}-[a-z]+-[1-9]{1}', " ".join(text))
-	if extractedRegion:
-		region = extractedRegion.group()
-		text.remove(region)
-
 	eb = session.client("elasticbeanstalk", region_name=region)
+
 	if 'list' in text:
 		text.remove("list")
 		ret = ""
@@ -68,6 +81,7 @@ def main(text):
 			application = None
 			if len(text) > 0:
 				application = " ".join(text)
+
 			attachments = []
 			environments = []
 			try:
@@ -83,17 +97,19 @@ def main(text):
 				return "Application " + application + " was not found in region " + region
 
 			if len(environments) == 0:
-				return "There doesn't seem to be any environments in the application " + text[0]
+				return "There doesn't seem to be any environments in the application " + application
 
 			fields = []
 			activeLoadBalancer = None
+
 			if application != None and loadedApplications != None:
 				for app in loadedApplications[region]:
-					if app['ApplicationName'] == application:
+					if app['ApplicationName'].lower() == application.lower():
 						r = session.client('route53', region_name=region)
 						records = r.list_resource_record_sets(HostedZoneId=app['HostedZoneId'], StartRecordName=app['DNSRecord'], StartRecordType='A')
 							
 						activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
+
 			for env in environments:
 				live = ""
 				if activeLoadBalancer != None :
@@ -147,7 +163,7 @@ def main(text):
 			activeLoadBalancer = None
 			if application != None and loadedApplications != None:
 				for app in loadedApplications[region]:
-					if app['ApplicationName'] == application:
+					if app['ApplicationName'].lower() == application.lower():
 						r = session.client('route53', region_name=region)
 						records = r.list_resource_record_sets(HostedZoneId=app['HostedZoneId'], StartRecordName=app['DNSRecord'], StartRecordType='A')
 							
@@ -248,12 +264,12 @@ def main(text):
 						'short': True
 					})
 
-			status = ":green_heart:"
+			status = ":healthy-environment:"
 			health = description['Health']
 			if health == 'Yellow':
-				status = ":yellow_heart:"
+				status = ":unstable-environment:"
 			elif health == "Red":
-				status = ":heart:"
+				status = ":failing-environment:"
 			else:
 				if description['Status'] == "Launching":
 					status = ":rocket:"
@@ -323,4 +339,4 @@ def information():
 	jarvis eb list applications <region>
 	jarvis eb list environments <application> <region>
 	jarvis eb describe application <application> <region>
-	jarvis eb describe environment <environment> <application> <region> [graph] [latency|memory] """
+	jarvis eb describe environment <environment> <application> <region> [graph] [latency|requests] """

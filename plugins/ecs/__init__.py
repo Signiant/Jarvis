@@ -15,31 +15,42 @@ def main(text):
 	ret = ""
 	
 	text.pop(0) # remove command name
+	if len(text) == 0:
+		return "You did not supply a query to run"
+	if text[0] == 'help':
+		return information()
 
 	awsKeyId = None
 	awsSecretKey = None
 	awsSessionToken = None
 
-	if os.path.isfile("./aws.config"):
-	  with open("aws.config") as f:
-	    accounts = json.load(f)
-	    for account in accounts['Accounts']:
-	    	if account['AccountName'] in text:
-	    		text.remove(account['AccountName'])
-	    		sts_client = boto3.client('sts')
-	    		assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'], RoleSessionName="AssumedRole")
-	    		awsKeyId = assumedRole['Credentials']['AccessKeyId']
-	    		awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
-	    		awsSessionToken = assumedRole['Credentials']['SessionToken']
+	tokens = []
+	if 'in' in text:
+		while text[-1] != 'in':
+			tokens.append(text.pop())
+		extractedRegion = re.search(r'[a-z]{2}-[a-z]+-[1-9]{1}', " ".join(tokens))
+		if extractedRegion:
+			region = extractedRegion.group()
+			tokens.remove(region)
+		text.remove('in')
 
+	if len(tokens) > 0 and os.path.isfile("./aws.config"):
+		with open("aws.config") as f:
+			config = json.load(f)
+		for account in config['Accounts']:
+			if account['AccountName'] in tokens:
+				tokens.remove(account['AccountName'])
+				sts_client = boto3.client('sts')
+				assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'], RoleSessionName="AssumedRole")
+				awsKeyId = assumedRole['Credentials']['AccessKeyId']
+				awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
+				awsSessionToken = assumedRole['Credentials']['SessionToken']
+			if len(tokens) > 0:
+				return "Could not resolve " + " ".join(tokens)
+	elif len(tokens) > 0:
+		return "Could not locate aws.config file"
 
 	session = boto3.session.Session(aws_access_key_id=awsKeyId, aws_secret_access_key=awsSecretKey, aws_session_token=awsSessionToken)
-
-
-	extractedRegion = re.search(r'[a-z]{2}-[a-z]+-[1-9]{1}', " ".join(text))
-	if extractedRegion:
-		region = extractedRegion.group()
-		text.remove(region)
 
 	if 'regions' in text:
 		if 'clusters' in text:

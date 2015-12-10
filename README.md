@@ -85,3 +85,97 @@ Set a command that you want to use to call Jarvis (ex. /jarvis) and set the URL 
 Set the *Method* to `POST` and finish by customizing the bot's name and icon.
 
 Once that is done, issuing "/jarvis help" will display the available commands
+
+## Creating plugins
+
+To create a plugin, simply create a folder with the plugin name in the plugins folder. An example would be: `plugins/blame`
+
+In the plugin folder, `blame` in this case, create a file named __init__.py.
+
+This file is the entry point of your plugin. This python file MUST contain the following three functions:
+
+`main(text)` The entry point to your plugin's main functionality. More on return values later.
+
+`about()` This shows up when somebody asks Jarvis for help. Have it return a string that contains a brief description of what the plugin does.
+
+`information()` This shows up when somebody asks for help on a specific plugin. This is where you return a string containing a more detailed explanation.
+
+### main(text) return what?
+
+There are two ways a plugin can return values to be posted into your slack.
+
+The first method is just returning a string. This will just post said string on a slack channel.
+
+The second method is by returning a Slack attachment object. The syntax is as follows:
+
+```json
+{
+    "attachments": [
+        {
+            "fallback": "Required plain-text summary of the attachment.",
+
+            "color": "#36a64f",
+
+            "pretext": "Optional text that appears above the attachment block",
+
+            "author_name": "Bobby Tables",
+            "author_link": "http://flickr.com/bobby/",
+            "author_icon": "http://flickr.com/icons/bobby.jpg",
+
+            "title": "Slack API Documentation",
+            "title_link": "https://api.slack.com/",
+
+            "text": "Optional text that appears within the attachment",
+
+            "fields": [
+                {
+                    "title": "Priority",
+                    "value": "High",
+                    "short": false
+                }
+            ],
+
+            "image_url": "http://my-website.com/path/to/image.jpg",
+            "thumb_url": "http://example.com/path/to/thumb.png"
+        }
+    ]
+}
+```
+
+More information on the syntax of attachments can be found at: https://api.slack.com/docs/attachments
+
+## Configuring aws.config for the EB and ECS plugins
+
+The EB and ECS plugins make use of an aws.config file to assume roles in different accounts. The syntax of the config file is as follows:
+
+Note: We use a BlueGreen Deployment release technique on Elastic Beanstalk. In order to find out which is the `live` environment, the config file contains an `Applications` section that contains the Application Name, Hosted Zone ID, and DNS Record to figure out which environment is the `live` environment by looking at which load balancer the Route53 record set is pointing to.
+
+The `Applications` key at the same level as the `Accounts` key is the `default account`. i.e. the same account where Jarvis is running.
+
+```json
+{
+	"Accounts": [{
+		"AccountName": "KeyWord",
+		"RoleArn": "arn:aws:iam::role/jarvis”,
+		"Applications": {
+			"us-east-1": [{
+				"ApplicationName": “ApplicationName”,
+				"HostedZoneId": “ZXXXXXXXXXX”,
+				"DNSRecord": “something.somewhere.com”
+			}],
+			"us-west-1": [{
+				"ApplicationName": “ApplicationName”,
+				"HostedZoneId": “ZXXXXXXXXXX”,
+				"DNSRecord": “something.somewhere.com”
+			}]
+		}
+	}],
+	"Applications": {
+		"eu-west-1": [{
+			"ApplicationName": “ApplicationName”,
+				"HostedZoneId": “ZXXXXXXXXXX”,
+				"DNSRecord": “something.somewhere.com”
+		}]
+	}
+}
+```

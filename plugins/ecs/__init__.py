@@ -114,9 +114,9 @@ def main(text):
 				})
 			return attachments
 
-	elif 'describe' in text:
+	elif 'describe' in text or 'desc' in text:
 		cw = session.client('cloudwatch', region_name=region)
-		text.remove('describe')
+		text.pop(0)
 		createGraph = False
 
 		if "graph" in text:
@@ -340,5 +340,5 @@ def information():
 	jarvis ecs regions <in region/account>
 	jarvis ecs list clusters <region> <in region/account>
 	jarvis ecs list services <cluster> <region> <in region/account>
-	jarvis ecs describe <cluster> <region> <in region/account>
-	jarvis ecs describe <service> <cluster> <region> <in region/account>"""
+	jarvis ecs describe|desc <cluster> <region> <in region/account>
+	jarvis ecs describe|desc <service> <cluster> <region> <in region/account>"""

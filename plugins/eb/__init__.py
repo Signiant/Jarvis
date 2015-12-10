@@ -63,7 +63,7 @@ def main(text):
 	if 'list' in text:
 		text.remove("list")
 		ret = ""
-		if 'applications' in text:
+		if 'applications' in text or 'apps' in text:
 			try:
 				applications = eb.describe_applications()['Applications']
 			except Exception as e:
@@ -76,8 +76,8 @@ def main(text):
 				ret = ret + app['ApplicationName'] + "\n"
 				
 			return ret
-		elif 'environments' in text:
-			text.remove("environments")
+		elif 'environments' in text or 'envs' in text:
+			text.pop(0)
 			application = None
 			if len(text) > 0:
 				application = " ".join(text)
@@ -144,10 +144,10 @@ def main(text):
 				})
 			return attachments
 
-	elif 'describe' in text:
-		text.remove('describe')
+	elif 'describe' in text or 'desc' in text:
+		text.pop(0)
 		attachments = []
-		if 'application' in text:
+		if 'application' in text or 'app' in text:
 			text.remove('application')
 			application = " ".join(text)
 			environments = []
@@ -203,8 +203,8 @@ def main(text):
 				})
 			return attachments
 
-		elif 'environment' in text:
-			text.remove("environment")
+		elif 'environment' in text or 'env' in text:
+			text.pop(0)
 			environment = text.pop(0)
 			graph = False
 			graphType = None
@@ -336,7 +336,7 @@ def about():
 def information():
 	return """This plugin returns various information about clusters and services hosted on ECS.
 	The format of queries is as follows:
-	jarvis eb list applications <region> <in region/account>
-	jarvis eb list environments <application> <region> <in region/account>
-	jarvis eb describe application <application> <region> <in region/account>
-	jarvis eb describe environment <environment> <application> <region> <graph> <latency|requests> <in region/account>"""
+	jarvis eb list applications|apps <region> <in region/account>
+	jarvis eb list environments|envs <application> <region> <in region/account>
+	jarvis eb describe|desc application|app <application> <region> <in region/account>
+	jarvis eb describe|desc environment|env <environment> <application> <region> <graph> <latency|requests> <in region/account>"""

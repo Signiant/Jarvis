@@ -336,7 +336,7 @@ def about():
 def information():
 	return """This plugin returns various information about clusters and services hosted on ECS.
 	The format of queries is as follows:
-	jarvis eb list applications <region>
-	jarvis eb list environments <application> <region>
-	jarvis eb describe application <application> <region>
-	jarvis eb describe environment <environment> <application> <region> [graph] [latency|requests] """
+	jarvis eb list applications <region> <in region/account>
+	jarvis eb list environments <application> <region> <in region/account>
+	jarvis eb describe application <application> <region> <in region/account>
+	jarvis eb describe environment <environment> <application> <region> <graph> <latency|requests> <in region/account>"""

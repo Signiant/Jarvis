@@ -116,7 +116,7 @@ def main(text):
 
 	elif 'describe' in text:
 		cw = session.client('cloudwatch', region_name=region)
-		text.remove("describe")
+		text.remove('describe')
 		createGraph = False
 
 		if "graph" in text:
@@ -337,8 +337,8 @@ def about():
 def information():
 	return """This plugin returns various information about clusters and services hosted on ECS.
 	The format of queries is as follows:
-	jarvis ecs regions
-	jarvis ecs list clusters <region>
-	jarvis ecs list services <cluster> <region>
-	jarvis ecs describe <cluster> <region>
-	jarvis ecs describe <service> <cluster> <region> """
+	jarvis ecs regions <in region/account>
+	jarvis ecs list clusters <region> <in region/account>
+	jarvis ecs list services <cluster> <region> <in region/account>
+	jarvis ecs describe <cluster> <region> <in region/account>
+	jarvis ecs describe <service> <cluster> <region> <in region/account>"""

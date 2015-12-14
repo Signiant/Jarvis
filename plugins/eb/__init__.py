@@ -148,7 +148,7 @@ def main(text):
 		text.pop(0)
 		attachments = []
 		if 'application' in text or 'app' in text:
-			text.remove('application')
+			text.pop(0)
 			application = " ".join(text)
 			environments = []
 			try:

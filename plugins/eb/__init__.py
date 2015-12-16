@@ -105,10 +105,13 @@ def main(text):
 			if application != None and loadedApplications != None:
 				for app in loadedApplications[region]:
 					if app['ApplicationName'].lower() == application.lower():
-						r = session.client('route53', region_name=region)
-						records = r.list_resource_record_sets(HostedZoneId=app['HostedZoneId'], StartRecordName=app['DNSRecord'], StartRecordType='A')
-							
-						activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
+						try:
+							r = session.client('route53', region_name=region)
+							records = r.list_resource_record_sets(HostedZoneId=app['HostedZoneId'], StartRecordName=app['DNSRecord'], StartRecordType='A')
+								
+							activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
+						except:
+							pass
 
 			for env in environments:
 				live = ""
@@ -164,10 +167,13 @@ def main(text):
 			if application != None and loadedApplications != None:
 				for app in loadedApplications[region]:
 					if app['ApplicationName'].lower() == application.lower():
-						r = session.client('route53', region_name=region)
-						records = r.list_resource_record_sets(HostedZoneId=app['HostedZoneId'], StartRecordName=app['DNSRecord'], StartRecordType='A')
-							
-						activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
+						try:
+							r = session.client('route53', region_name=region)
+							records = r.list_resource_record_sets(HostedZoneId=app['HostedZoneId'], StartRecordName=app['DNSRecord'], StartRecordType='A')
+								
+							activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
+						except:
+							pass
 
 			for env in environments:
  				live = ""

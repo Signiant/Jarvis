@@ -45,8 +45,8 @@ def main(text):
 				awsKeyId = assumedRole['Credentials']['AccessKeyId']
 				awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
 				awsSessionToken = assumedRole['Credentials']['SessionToken']
-			if len(tokens) > 0:
-				return "Could not resolve " + " ".join(tokens)
+		if len(tokens) > 0:
+			return "Could not resolve " + " ".join(tokens)
 	elif len(tokens) > 0:
 		return "Could not locate aws.config file"
 

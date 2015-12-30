@@ -6,8 +6,6 @@ import os.path
 from datetime import *
 import common
 
-
-
 def main(text):
 	regionList = ['us-east-1', 'us-west-1', 'us-west-2', 'eu-west-1', 'ap-northeast-1', 'ap-southeast-2']
 	region = regionList[0]
@@ -106,13 +104,27 @@ def main(text):
 				for app in loadedApplications[region]:
 					if app['ApplicationName'].lower() == application.lower():
 						try:
-							r = session.client('route53', region_name=region)
+							if app.get('Account'):
+								for account in config['Accounts']:
+									print "Looping"
+									if account['AccountName'] == app['Account']:
+										sts_client = boto3.client('sts')
+										assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'], RoleSessionName="AssumedRole")
+										awsKeyId = assumedRole['Credentials']['AccessKeyId']
+										awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
+										awsSessionToken = assumedRole['Credentials']['SessionToken']
+					
+										session_temp = boto3.session.Session(aws_access_key_id=awsKeyId, aws_secret_access_key=awsSecretKey, aws_session_token=awsSessionToken)
+
+										r = session_temp.client('route53', region_name=region)
+							else:
+							    r = session.client('route53', region_name=region)
+
 							records = r.list_resource_record_sets(HostedZoneId=app['HostedZoneId'], StartRecordName=app['DNSRecord'], StartRecordType='A')
-								
+							
 							activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
 						except:
 							pass
-
 			for env in environments:
 				live = ""
 				if activeLoadBalancer != None :
@@ -168,13 +180,27 @@ def main(text):
 				for app in loadedApplications[region]:
 					if app['ApplicationName'].lower() == application.lower():
 						try:
-							r = session.client('route53', region_name=region)
+							if app.get('Account'):
+								for account in config['Accounts']:
+									print "Looping"
+									if account['AccountName'] == app['Account']:
+										sts_client = boto3.client('sts')
+										assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'], RoleSessionName="AssumedRole")
+										awsKeyId = assumedRole['Credentials']['AccessKeyId']
+										awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
+										awsSessionToken = assumedRole['Credentials']['SessionToken']
+					
+										session_temp = boto3.session.Session(aws_access_key_id=awsKeyId, aws_secret_access_key=awsSecretKey, aws_session_token=awsSessionToken)
+
+										r = session_temp.client('route53', region_name=region)
+							else:
+							    r = session.client('route53', region_name=region)
+
 							records = r.list_resource_record_sets(HostedZoneId=app['HostedZoneId'], StartRecordName=app['DNSRecord'], StartRecordType='A')
-								
+							
 							activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
 						except:
 							pass
-
 			for env in environments:
  				live = ""
 				if activeLoadBalancer != None :
@@ -342,7 +368,7 @@ def about():
 def information():
 	return """This plugin returns various information about clusters and services hosted on ECS.
 	The format of queries is as follows:
-	jarvis eb list applications|apps <region> [in <region/account>]
-	jarvis eb list environments|envs <application> [in <region/account>]
-	jarvis eb describe|desc application|app <application> [in <region/account>]
-	jarvis eb describe|desc environment|env <environment> <application> <graph> <latency|requests> [in <region/account>]"""
+	jarvis eb list applications|apps <in region/account>
+	jarvis eb list environments|envs <application> <in region/account>
+	jarvis eb describe|desc application|app <application> <in region/account>
+	jarvis eb describe|desc environment|env <environment> <application> <graph> <latency|requests> <in region/account>"""

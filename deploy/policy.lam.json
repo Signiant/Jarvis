@@ -1,0 +1,48 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "logs",
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": [
+                "arn:aws:logs:*:*:*"
+            ]
+        },
+        {
+            "Sid": "ecs",
+            "Effect": "Allow",
+            "Action": [
+                "ecs:DescribeClusters",
+                "ecs:ListClusters",
+                "ecs:ListServices",
+                "ecs:DescribeServices",
+                "ecs:ListTaskDefinitions",
+                "ecs:DescribeTaskDefinition",
+                "cloudwatch:GetMetricStatistics"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+        {
+            "Sid": "eb",
+            "Effect": "Allow",
+            "Action": [
+                "elasticbeanstalk:DescribeApplications",
+                "elasticbeanstalk:DescribeEnvironments",
+                "elasticbeanstalk:DescribeEnvironmentResources",
+                "elasticbeanstalk:DescribeEvents",
+                "autoscaling:DescribeAutoScalingGroups",
+                "route53:ListResourceRecordSets"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "Jarvis",
+  "archive": "lambda.zip",
+  "description": "Just A Rather Very Intelligent Slackbot",
+  "region": "us-east-1",
+  "runtime": "python2.7",
+  "memorySize": 128,
+  "timeout": 15,
+  "handler": "lambda_function.lambda_handler",
+  "events": []
+}

@@ -40,7 +40,7 @@ Create and attach a policy or more to the role that allows listing and describin
 ### Lambda
 Create a new Lambda function and choose to upload a python zip, select the created zip and hit save.
 
-Under API Endpoints, choose to add an API endpoint from API Gateway. Fill in the form and select POST for the method.
+Under API Endpoints, choose to add an API endpoint from API Gateway. Fill in the form, selecting POST for the method and Open for the security.
 
 ### API Gateway
 Navigate to your created API Gateway entry for the Lambda function. Open the POST method then choose **Integration Request**

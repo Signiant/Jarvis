@@ -359,6 +359,48 @@ def main(text):
 						timedata))
 
 			return attachments 
+			
+	elif 'unpause' in text or 'unp' in text:
+		text.pop(0)
+		environment = " ".join(text)
+		message = "Environment " + environment + " has been unpaused"
+		
+		try:
+			resources = eb.describe_environment_resources(EnvironmentName=environment)['EnvironmentResources']
+		except Exception as e:
+			print e
+			return "Environment " + environment + " was not found in region " + region
+			
+		autoscalerName = resources['AutoScalingGroups'][0]['Name']
+		asClient = session.client('autoscaling', region_name=region)
+		autoscaler = asClient.describe_auto_scaling_groups(AutoScalingGroupNames=[autoscalerName])['AutoScalingGroups'][0]
+		
+		if autoscaler['MaxSize'] != 0 or autoscaler['MinSize'] != 0:
+			return "Environment " + environment + " is not currently paused"
+		
+		autoscalerTags= autoscaler['Tags']
+		
+		try:
+			minInstances = int(next((tag['Value'] for tag in autoscalerTags if tag['Key'] == 'pause:max-instances')))
+			maxInstances = int(next((tag['Value'] for tag in autoscalerTags if tag['Key'] == 'pause:min-instances')))
+		except Exception as e:
+			minInstances = 1
+			maxInstances = 1
+			message += "\nTags were missing for instance size on the autoscaling group, max and min instances set to a default of 1"
+
+			
+		try:
+			asClient.update_auto_scaling_group(
+				AutoScalingGroupName=autoscalerName,
+				MinSize=minInstances,
+				MaxSize=maxInstances
+			)
+		except Exception as e:
+			print e
+			return "Unable to unpause environment " + environment
+		
+		return message
+		
 	else:
 		return "I did not understand the query. Please try again."
 
@@ -371,4 +413,5 @@ def information():
 	jarvis eb list applications|apps <in region/account>
 	jarvis eb list environments|envs <application> <in region/account>
 	jarvis eb describe|desc application|app <application> <in region/account>
-	jarvis eb describe|desc environment|env <environment> <application> <graph> <latency|requests> <in region/account>"""
+	jarvis eb describe|desc environment|env <environment> <application> <graph> <latency|requests> <in region/account>
+	jarvis eb unpause|unp <environment> <in region/account>"""

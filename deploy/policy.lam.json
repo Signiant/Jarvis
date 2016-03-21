@@ -38,6 +38,7 @@
                 "elasticbeanstalk:DescribeEnvironmentResources",
                 "elasticbeanstalk:DescribeEvents",
                 "autoscaling:DescribeAutoScalingGroups",
+                "autoscaling:UpdateAutoScalingGroup",
                 "route53:ListResourceRecordSets"
             ],
             "Resource": [

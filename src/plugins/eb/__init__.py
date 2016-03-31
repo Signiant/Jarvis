@@ -253,7 +253,7 @@ def main(text):
 				description = eb.describe_environments(EnvironmentNames=[environment])['Environments'][0]
 			except Exception as e:
 				print e
-				return "Application " + application + " was not found in region " + region
+				return "Environment " + environment + " was not found in region " + region
 
 			events = eb.describe_events(EnvironmentName=environment,
 										MaxRecords=5, 
@@ -413,5 +413,5 @@ def information():
 	jarvis eb list applications|apps <in region/account>
 	jarvis eb list environments|envs <application> <in region/account>
 	jarvis eb describe|desc application|app <application> <in region/account>
-	jarvis eb describe|desc environment|env <environment> <application> <graph> <latency|requests> <in region/account>
+	jarvis eb describe|desc environment|env <environment> <graph> <latency|requests> <in region/account>
 	jarvis eb unpause|unp <environment> <in region/account>"""

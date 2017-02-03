@@ -13,7 +13,7 @@ def main(text):
 	region = regionList[0]
 	cluster = ""
 	ret = ""
-	
+
 	text.pop(0) # remove command name
 	if len(text) == 0:
 		return "You did not supply a query to run"
@@ -72,47 +72,51 @@ def main(text):
 				return "There are no clusters in this region: " + region
 			for cluster in clusters:
 				ret = ret + cluster.split('/')[-1] + '\n'
-				
+
 			return ret
 		elif 'services' in text:
 			text.remove("services")
 
 			if len(text) == 0:
 				return "I need a cluster name to complete the requested operation. To view the cluster names, use 'jarvis ecs list clusters <region>'"
+
 			attachments = []
-			services = []
+			fields = []
+
 			try:
+				sPaginator = ecs.get_paginator('list_services')
+				sIterator = sPaginator.paginate(cluster=text[0])
+				for cluster in sIterator:
+					services = []
+					for service in cluster['serviceArns']:
+						services.append(service)
 
-				for service in ecs.list_services(cluster=text[0])['serviceArns']:
-					services.append(service)
+					if len(services) == 0:
+						return "There doesn't seem to be any services in the cluster " + text[0]
 
+					services_desc = ecs.describe_services(cluster=text[0], services=services)
+					for service in services_desc['services']:
+						image = ecs.describe_task_definition(taskDefinition=service['taskDefinition'])
+						imagename = image['taskDefinition']['containerDefinitions'][0]['image'].split(':')[-1]
+						servicename = service['serviceName'].split('/')[-1]
+						ret = ret + servicename + "\t\t" + imagename + "\n"
+						fields.append({
+							'title': servicename,
+							'value': 'Version: ' + imagename,
+							'short': True
+						})
+
+				attachments.append({
+					'fallback': 'Service List',
+					'title': 'List of Services',
+					'fields': fields
+				})
+
+				return attachments
 			except Exception as e:
 				print e
 				return "Cluster " + text[0] + " was not found in region " + region
-			if len(services) == 0:
-				return "There doesn't seem to be any services in the cluster " + text[0]
 
-
-			services_desc = ecs.describe_services(cluster=text[0],services=services)
-			fields = []
-			for service in services_desc['services']:
-				image = ecs.describe_task_definition(taskDefinition=service['taskDefinition'])
-				imagename = image['taskDefinition']['containerDefinitions'][0]['image'].split(':')[-1]
-				servicename = service['serviceName'].split('/')[-1]
-				ret = ret + servicename + "\t\t" + imagename + "\n"
-				fields.append({
-						'title': servicename,
-						'value': 'Version: ' + imagename,
-						'short': True
-					})
-
-			attachments.append({
-					'fallback': 'Service List',
-					'title': 'List of Services',
-					'fields': fields,
-					'color': 'good'
-				})
-			return attachments
 
 	elif 'describe' in text or 'desc' in text:
 		cw = session.client('cloudwatch', region_name=region)
@@ -125,7 +129,7 @@ def main(text):
 
 		if len(text) == 1:
 			clustername = text[0]
-			
+
 			clusters = ecs.describe_clusters(clusters=[clustername])
 
 			if clusters['failures']:
@@ -133,8 +137,8 @@ def main(text):
 
 			attachments = []
 
-			clustercpu = cw.get_metric_statistics(	Namespace="AWS/ECS", 
-													MetricName="CPUUtilization", 
+			clustercpu = cw.get_metric_statistics(	Namespace="AWS/ECS",
+													MetricName="CPUUtilization",
 													Dimensions=[{'Name': 'ClusterName', 'Value': clustername}],
 													StartTime=datetime.today() - timedelta(days=1),
 													EndTime=datetime.today(),
@@ -142,8 +146,8 @@ def main(text):
 													Statistics=['Average'],
 													Unit='Percent')
 
-			clustermem = cw.get_metric_statistics(	Namespace="AWS/ECS", 
-													MetricName="MemoryUtilization", 
+			clustermem = cw.get_metric_statistics(	Namespace="AWS/ECS",
+													MetricName="MemoryUtilization",
 													Dimensions=[{'Name': 'ClusterName', 'Value': clustername}],
 													StartTime=datetime.utcnow() - timedelta(days=1),
 													EndTime=datetime.utcnow(),
@@ -208,9 +212,9 @@ def main(text):
 				})
 
 			if createGraph:
-				attachments.append(common.create_graph('Graphing Cluster CPU and Memory Usage over 1 day', 
-					'Cluster CPU', [i[1] for i in cpudata], 
-					'Cluster Memory', [i[1] for i in memdata], 
+				attachments.append(common.create_graph('Graphing Cluster CPU and Memory Usage over 1 day',
+					'Cluster CPU', [i[1] for i in cpudata],
+					'Cluster Memory', [i[1] for i in memdata],
 					[i[0].strftime("%I%M") for i in cpudata]))
 
 			return attachments
@@ -218,7 +222,7 @@ def main(text):
 			attachments = []
 
 			if len(text) < 2:
-				return """I need a cluster name and a service name to complete the requested operation. 
+				return """I need a cluster name and a service name to complete the requested operation.
 				To view the cluster names, use 'jarvis ecs list clusters <region>'
 				To view the services, use 'jarvis ecs list services <cluster> <region>'"""
 
@@ -286,8 +290,8 @@ def main(text):
 			if matched:
 				if createGraph:
 
-					servicecpu = cw.get_metric_statistics(	Namespace="AWS/ECS", 
-												MetricName="CPUUtilization", 
+					servicecpu = cw.get_metric_statistics(	Namespace="AWS/ECS",
+												MetricName="CPUUtilization",
 												Dimensions=[{'Name': 'ClusterName', 'Value': clustername}, {'Name': 'ServiceName', 'Value': servicename}],
 												StartTime=datetime.today() - timedelta(days=1),
 												EndTime=datetime.today(),
@@ -300,8 +304,8 @@ def main(text):
 					for datapoint in servicecpu['Datapoints']:
 						cpudata.append([datapoint['Timestamp'], datapoint['Average']])
 
-					servicemem = cw.get_metric_statistics(	Namespace="AWS/ECS", 
-												MetricName="MemoryUtilization", 
+					servicemem = cw.get_metric_statistics(	Namespace="AWS/ECS",
+												MetricName="MemoryUtilization",
 												Dimensions=[{'Name': 'ClusterName', 'Value': clustername}, {'Name': 'ServiceName', 'Value': servicename}],
 												StartTime=datetime.today() - timedelta(days=1),
 												EndTime=datetime.today(),
@@ -319,10 +323,10 @@ def main(text):
 					cpudata = sorted(cpudata, key=lambda x: x[0])
 
 					attachments.append(common.create_graph("Graphing Service CPU and Memory Usage over 1 day",
-						'Service CPU', 
-						[i[1] for i in cpudata], 
-						'Service Memory', 
-						[i[1] for i in memdata], 
+						'Service CPU',
+						[i[1] for i in cpudata],
+						'Service Memory',
+						[i[1] for i in memdata],
 						[i[0].strftime("%I%M") for i in cpudata]))
 
 				return attachments
@@ -337,7 +341,7 @@ def about():
 def information():
 	return """This plugin returns various information about clusters and services hosted on ECS.
 	The format of queries is as follows:
-	jarvis ecs regions 
+	jarvis ecs regions
 	jarvis ecs list clusters [in <region/account>]
 	jarvis ecs list services <cluster> [in <region/account>]
 	jarvis ecs describe|desc <cluster> [in <region/account>]

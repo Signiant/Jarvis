@@ -1,5 +1,5 @@
 # Jarvis
-Jarvis is your personal AWS Slackbot. Currently, Jarvis can be used to find out information about ECS services running in AWS.
+Jarvis is your personal AWS Slackbot. Currently, Jarvis can be used to find out information about ECS services and Elastic Beanstalk environments running in AWS.
 
 ## Preparing
 Clone the repository

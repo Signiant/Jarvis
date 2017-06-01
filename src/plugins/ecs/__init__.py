@@ -3,8 +3,8 @@ import json
 import re
 import math
 import os.path
-import sys
 from datetime import *
+import common
 
 
 def main(text):
@@ -113,6 +113,10 @@ def main(text):
 				except Exception as e:
 					print e
 					return "Cluster " + text[0] + " was not found in region " + region
+
+			else:
+				return "No valid option for command jarvis ecs list tasks found. Please review /jarvis --help and try again."
+
 
         elif 'services' in text:
 			text.remove("services")

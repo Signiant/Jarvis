@@ -7,7 +7,6 @@ from datetime import *
 import common
 
 
-
 def main(text):
 	regionList = ['us-east-1', 'us-west-1', 'us-west-2', 'eu-west-1', 'ap-northeast-1', 'ap-southeast-2']
 	region = regionList[0]
@@ -74,6 +73,52 @@ def main(text):
 				ret = ret + cluster.split('/')[-1] + '\n'
 
 			return ret
+
+		#see if tasks is in user command
+		elif tasks_check_text(text):
+
+			tasks_lookup_term = tasks_get_lookup_term(text)
+			fields = []
+			attachments = []
+
+			if not text:
+				return "I need a cluster name to complete the requested operation. To view the cluster names, use 'jarvis ecs list clusters <region>'"
+
+			if 'running' in text:
+				text.remove("running")
+
+				try:
+					resulting_array = get_task_list(cluster=text[0], ecs=ecs)
+					query_result = ecs.describe_tasks(cluster=text[0], tasks=resulting_array)
+					instance_task_families = parse_tasks(query_result['tasks'], tasks_lookup_term)
+
+					if len(instance_task_families) == 0:
+						return "No tasks where found matching the lookup term for tasks. To look up a particular task, use 'jarvis ecs list tasks-><optional term> running <cluster> [in <region/account>]' "
+
+					for tasks in instance_task_families:
+						fields.append({
+								'title': tasks,
+								'value': 'Count: ' + str(instance_task_families[tasks]['count']),
+								'short': True
+							})
+
+					attachments.append({
+						'fallback': 'Service List',
+						'title': 'List of Running Tasks',
+						'fields': fields
+					})	
+
+					return attachments
+
+
+				except Exception as e:
+					print e
+					return "Cluster " + text[0] + " was not found in region " + region
+
+			else:
+				return "No valid option for command jarvis ecs list tasks found. Please review /jarvis --help and try again."
+
+
 		elif 'services' in text:
 			text.remove("services")
 
@@ -345,4 +390,73 @@ def information():
 	jarvis ecs list clusters [in <region/account>]
 	jarvis ecs list services <cluster> [in <region/account>]
 	jarvis ecs describe|desc <cluster> [in <region/account>]
-	jarvis ecs describe|desc <service> <cluster> [in <region/account>]"""
+	jarvis ecs describe|desc <service> <cluster> [in <region/account>]
+	jarvis ecs list tasks[-><task_name_optional>] running <cluster> [in <region/account>]"""
+
+
+#list the tasks in cluster
+def get_task_list(next_token=None, cluster=None, ecs=None):
+    ''' Get the running tasks '''
+    running_tasks = []
+
+    # Get tasks in this cluster
+    query_result = ecs.list_tasks(cluster=cluster)
+
+    if 'ResponseMetadata' in query_result:
+        if 'HTTPStatusCode' in query_result['ResponseMetadata']:
+            if query_result['ResponseMetadata']['HTTPStatusCode'] == 200:
+                if 'nextToken' in query_result:
+                    running_tasks.extend(get_task_list(next_token=query_result['nextToken']))
+                else:
+                    running_tasks.extend(query_result['taskArns'])
+    return running_tasks
+
+
+def parse_tasks(task_list, lookup_term):
+
+    ''' Parse task_list and return a dict containing family:count'''
+    task_families = {}
+    for task in task_list:
+
+        # Get the task type (service or family)
+        type = task['group'].split(':')[0]
+        # Get the task family for this task
+        family = task['group'].split(':')[-1]
+
+
+        if tasks_add_not_blank(family,lookup_term):
+        	if type == "family":
+				if family not in task_families:
+					task_families[family] = {}
+					task_families[family]['count'] = 1
+				else:
+					task_families[family]['count'] = task_families[family]['count'] + 1
+	
+    return task_families
+
+
+def tasks_add_not_blank(theword,lookup_word):
+	if not theword:
+		return True
+	else:
+		if theword.lower().find(lookup_word) > -1:
+			return True
+		else:
+			return False
+
+#check to see if tasks word in arguments
+def tasks_check_text(text):
+    for data in text:
+        if 'tasks' in data.split('->'):
+            return True
+
+
+def tasks_get_lookup_term(text):
+    for data in text:
+        if 'tasks' in data.split('->'):
+            text.remove(data)
+            if data.split('->')[-1] == 'tasks':
+                return None
+            else:
+                return data[(data.find('->')+2):]
+

@@ -73,21 +73,22 @@ def main(text):
 				ret = ret + cluster.split('/')[-1] + '\n'
 
 			return ret
-		
+
+		#see if tasks is in user command
 		elif tasks_check_text(text):
 
 			tasks_lookup_term = tasks_get_lookup_term(text)
 			fields = []
 			attachments = []
 
-			if len(text) == 0:
+			if not text:
 				return "I need a cluster name to complete the requested operation. To view the cluster names, use 'jarvis ecs list clusters <region>'"
 
 			if 'running' in text:
 				text.remove("running")
 
 				try:
-					resulting_array = get_task_list(instance=None, next_token=None, cluster=text[0], ecs=ecs)
+					resulting_array = get_task_list(cluster=text[0], ecs=ecs)
 					query_result = ecs.describe_tasks(cluster=text[0], tasks=resulting_array)
 					instance_task_families = parse_tasks(query_result['tasks'], tasks_lookup_term)
 
@@ -118,7 +119,7 @@ def main(text):
 				return "No valid option for command jarvis ecs list tasks found. Please review /jarvis --help and try again."
 
 
-        elif 'services' in text:
+		elif 'services' in text:
 			text.remove("services")
 
 			if len(text) == 0:
@@ -394,26 +395,18 @@ def information():
 
 
 #list the tasks in cluster
-def get_task_list(instance=None, next_token=None, cluster=None, ecs=None):
+def get_task_list(next_token=None, cluster=None, ecs=None):
     ''' Get the running tasks '''
     running_tasks = []
-    if instance:
-        # Get tasks on this instance
-        if next_token:
-            query_result = ecs.list_tasks(cluster=cluster, containerInstance=instance, nextToken=next_token)
-        else:
-            query_result = ecs.list_tasks(cluster=cluster, containerInstance=instance)
-    else:
-        # Get tasks in this cluster
-        if next_token:
-            query_result = ecs.list_tasks(cluster=cluster, nextToken=next_token)
-        else:
-            query_result = ecs.list_tasks(cluster=cluster)
+
+    # Get tasks in this cluster
+    query_result = ecs.list_tasks(cluster=cluster)
+
     if 'ResponseMetadata' in query_result:
         if 'HTTPStatusCode' in query_result['ResponseMetadata']:
             if query_result['ResponseMetadata']['HTTPStatusCode'] == 200:
                 if 'nextToken' in query_result:
-                    running_tasks.extend(get_task_list(instance=instance, next_token=query_result['nextToken']))
+                    running_tasks.extend(get_task_list(next_token=query_result['nextToken']))
                 else:
                     running_tasks.extend(query_result['taskArns'])
     return running_tasks
@@ -443,7 +436,7 @@ def parse_tasks(task_list, lookup_term):
 
 
 def tasks_add_not_blank(theword,lookup_word):
-	if theword == "":
+	if not theword:
 		return True
 	else:
 		if theword.lower().find(lookup_word) > -1:
@@ -463,7 +456,7 @@ def tasks_get_lookup_term(text):
         if 'tasks' in data.split('->'):
             text.remove(data)
             if data.split('->')[-1] == 'tasks':
-                return ""
+                return None
             else:
                 return data[(data.find('->')+2):]
 

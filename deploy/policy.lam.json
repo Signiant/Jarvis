@@ -23,6 +23,8 @@
                 "ecs:DescribeServices",
                 "ecs:ListTaskDefinitions",
                 "ecs:DescribeTaskDefinition",
+                "ecs:DescribeTasks",
+                "ecs:ListTasks",
                 "cloudwatch:GetMetricStatistics"
             ],
             "Resource": [

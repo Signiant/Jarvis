@@ -92,7 +92,7 @@ def main(text):
 					query_result = ecs.describe_tasks(cluster=text[0], tasks=resulting_array)
 					instance_task_families = parse_tasks(query_result['tasks'], tasks_lookup_term)
 
-					if len(instance_task_families) == 0:
+					if not instance_task_families:
 						return "No tasks where found matching the lookup term for tasks. To look up a particular task, use 'jarvis ecs list tasks-><optional term> running <cluster> [in <region/account>]' "
 
 					for tasks in instance_task_families:
@@ -103,16 +103,15 @@ def main(text):
 							})
 
 					attachments.append({
-						'fallback': 'Service List',
+						'fallback': 'List of Running Tasks',
 						'title': 'List of Running Tasks',
 						'fields': fields
 					})	
 
 					return attachments
 
-
 				except Exception as e:
-					print e
+					print "exception in tasks option is "+str(e)
 					return "Cluster " + text[0] + " was not found in region " + region
 
 			else:
@@ -391,7 +390,7 @@ def information():
 	jarvis ecs list services <cluster> [in <region/account>]
 	jarvis ecs describe|desc <cluster> [in <region/account>]
 	jarvis ecs describe|desc <service> <cluster> [in <region/account>]
-	jarvis ecs list tasks[-><task_name_optional>] running <cluster> [in <region/account>]"""
+	jarvis ecs list tasks[---<task_name_optional>] running <cluster> [in <region/account>]"""
 
 
 #list the tasks in cluster
@@ -423,7 +422,6 @@ def parse_tasks(task_list, lookup_term):
         # Get the task family for this task
         family = task['group'].split(':')[-1]
 
-
         if tasks_add_not_blank(family,lookup_term):
         	if type == "family":
 				if family not in task_families:
@@ -435,28 +433,28 @@ def parse_tasks(task_list, lookup_term):
     return task_families
 
 
-def tasks_add_not_blank(theword,lookup_word):
-	if not theword:
-		return True
-	else:
-		if theword.lower().find(lookup_word) > -1:
-			return True
-		else:
-			return False
+def tasks_add_not_blank(theword, lookup_word):
+    if len(lookup_word.replace(" ","")) == 0:
+        return True
+    else:
+        if theword.lower().find(str(lookup_word)):
+            return True
+        else:
+            return False
 
 #check to see if tasks word in arguments
 def tasks_check_text(text):
     for data in text:
-        if 'tasks' in data.split('->'):
+        if 'tasks' in data.split('---'):
             return True
 
 
 def tasks_get_lookup_term(text):
     for data in text:
-        if 'tasks' in data.split('->'):
+        if 'tasks' in data.split('---'):
             text.remove(data)
-            if data.split('->')[-1] == 'tasks':
-                return None
+            if data.split('---')[-1] == 'tasks':
+                return ""
             else:
-                return data[(data.find('->')+2):]
+                return data[(data.find('---')+2):]
 

@@ -90,16 +90,20 @@ def main(text):
 				try:
 					resulting_array = get_task_list(cluster=text[0], ecs=ecs)
 					query_result = ecs.describe_tasks(cluster=text[0], tasks=resulting_array)
-					instance_task_families = parse_tasks(query_result['tasks'], tasks_lookup_term)
 
+					instance_task_families = parse_tasks(query_result['tasks'], tasks_lookup_term, ecs)
 
-					if len(instance_task_families) == 0:
-						return "No tasks where found matching the lookup term for tasks. To look up a particular task, use 'jarvis ecs list tasks-><optional term> running <cluster> [in <region/account>]' "
+					if not instance_task_families:
+						return "No tasks where found matching the lookup term for tasks. To look up a particular task, use 'jarvis ecs list tasks---<optional term> running <cluster> [in <region/account>]' "
+
 
 					for tasks in instance_task_families:
 						fields.append({
 								'title': tasks,
-								'value': 'Count: ' + str(instance_task_families[tasks]['count']),
+
+								'value': 'Version: '+str(instance_task_families[tasks]['version'])+ '\nCount: '
+										 + str(instance_task_families[tasks]['count']),
+
 								'short': True
 							})
 
@@ -398,7 +402,8 @@ def information():
 
 
 
-#list the tasks in cluster
+# list the tasks in cluster
+
 def get_task_list(next_token=None, cluster=None, ecs=None):
     ''' Get the running tasks '''
     running_tasks = []
@@ -416,7 +421,9 @@ def get_task_list(next_token=None, cluster=None, ecs=None):
     return running_tasks
 
 
-def parse_tasks(task_list, lookup_term):
+
+def parse_tasks(task_list, lookup_term, plugin):
+
 
     ''' Parse task_list and return a dict containing family:count'''
     task_families = {}
@@ -427,41 +434,50 @@ def parse_tasks(task_list, lookup_term):
         # Get the task family for this task
         family = task['group'].split(':')[-1]
 
-        if tasks_add_not_blank(family,lookup_term):
-        	if type == "family":
-				if family not in task_families:
-					task_families[family] = {}
-					task_families[family]['count'] = 1
-				else:
-					task_families[family]['count'] = task_families[family]['count'] + 1
-	
+
+        image = plugin.describe_task_definition(taskDefinition=family)
+        version_name = image['taskDefinition']['containerDefinitions'][0]['image'].split('/')[-1].split(':')[-1]
+
+        if tasks_add_not_blank(family, lookup_term):
+            if type == "family":
+                if family not in task_families:
+                    task_families[family] = {}
+                    task_families[family]['count'] = 1
+                    task_families[family]['version'] = version_name
+                else:
+                    task_families[family]['count'] = task_families[family]['count'] + 1
+
     return task_families
 
 
-
 def tasks_add_not_blank(theword, lookup_word):
-    if len(lookup_word.replace(" ","")) == 0:
+
+    if not lookup_word:
         return True
     else:
-        if theword.lower().find(str(lookup_word)):
+        if theword.lower().find(str(lookup_word.lower())) > -1:
+
             return True
         else:
             return False
 
 
-#check to see if tasks word in arguments
+# check to see if tasks word in arguments
 def tasks_check_text(text):
     for data in text:
-        if 'tasks' in data.split('---'):
-          return True
+        if 'tasks' in data.lower().split('---'):
+            return True
+
 
 def tasks_get_lookup_term(text):
     for data in text:
-        if 'tasks' in data.split('---'):
+        if 'tasks' in data.lower().split('---'):
             text.remove(data)
-            if data.split('---')[-1] == 'tasks':
-                return ""
+            if data.lower().split('---')[-1] == 'tasks':
+                return None
             else:
-                return data[(data.find('---')+2):]
+                return data[(data.lower().find('---') + 3):]
+
+
 
 

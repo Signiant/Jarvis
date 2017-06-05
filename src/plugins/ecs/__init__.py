@@ -90,20 +90,25 @@ def main(text):
 				try:
 					resulting_array = get_task_list(cluster=text[0], ecs=ecs)
 					query_result = ecs.describe_tasks(cluster=text[0], tasks=resulting_array)
+
 					instance_task_families = parse_tasks(query_result['tasks'], tasks_lookup_term, ecs)
 
 					if not instance_task_families:
 						return "No tasks where found matching the lookup term for tasks. To look up a particular task, use 'jarvis ecs list tasks---<optional term> running <cluster> [in <region/account>]' "
 
+
 					for tasks in instance_task_families:
 						fields.append({
 								'title': tasks,
+
 								'value': 'Version: '+str(instance_task_families[tasks]['version'])+ '\nCount: '
 										 + str(instance_task_families[tasks]['count']),
+
 								'short': True
 							})
 
 					attachments.append({
+
 						'fallback': 'List of Running Tasks',
 						'title': 'List of Running Tasks',
 						'fields': fields
@@ -111,8 +116,10 @@ def main(text):
 
 					return attachments
 
+
 				except Exception as e:
 					print "exception in tasks option is "+str(e)
+
 					return "Cluster " + text[0] + " was not found in region " + region
 
 			else:
@@ -394,7 +401,9 @@ def information():
 	jarvis ecs list tasks[---<task_name_optional>] running <cluster> [in <region/account>]"""
 
 
+
 # list the tasks in cluster
+
 def get_task_list(next_token=None, cluster=None, ecs=None):
     ''' Get the running tasks '''
     running_tasks = []
@@ -412,7 +421,9 @@ def get_task_list(next_token=None, cluster=None, ecs=None):
     return running_tasks
 
 
+
 def parse_tasks(task_list, lookup_term, plugin):
+
 
     ''' Parse task_list and return a dict containing family:count'''
     task_families = {}
@@ -422,6 +433,7 @@ def parse_tasks(task_list, lookup_term, plugin):
         type = task['group'].split(':')[0]
         # Get the task family for this task
         family = task['group'].split(':')[-1]
+
 
         image = plugin.describe_task_definition(taskDefinition=family)
         version_name = image['taskDefinition']['containerDefinitions'][0]['image'].split('/')[-1].split(':')[-1]
@@ -444,9 +456,11 @@ def tasks_add_not_blank(theword, lookup_word):
         return True
     else:
         if theword.lower().find(str(lookup_word.lower())) > -1:
+
             return True
         else:
             return False
+
 
 # check to see if tasks word in arguments
 def tasks_check_text(text):
@@ -463,4 +477,7 @@ def tasks_get_lookup_term(text):
                 return None
             else:
                 return data[(data.lower().find('---') + 3):]
+
+
+
 

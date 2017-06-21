@@ -20,12 +20,8 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
 	else:
 		cluster_list.append(cluster_name)
 
-	print cluster_list
-
 	for cluster in cluster_list:
 		try:
-
-
 			for account in the_config['Accounts']:
 				if account['AccountName'] == profile_name:
 					sts_client = boto3.client('sts')
@@ -81,7 +77,7 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
 	return service_versions
 
 	# Main comparing function
-def compare_environment(team_env, master_env, j_tags):
+def compare_environment(team_env, master_env, jenkin_build_terms):
 
 	"""""
 	Return types
@@ -92,11 +88,11 @@ def compare_environment(team_env, master_env, j_tags):
 
 	result = 0
 
-	if j_tags[0] in master_env or j_tags[1] in master_env:
+	if jenkin_build_terms[0] in master_env or jenkin_build_terms[1] in master_env:
 		if team_env == master_env:
 			result = 1
 		else:
-			if j_tags[0] in master_env or j_tags[1] in master_env:
+			if jenkin_build_terms[0] in master_env or jenkin_build_terms[1] in master_env:
 				result = 2
 			else:
 				result = 3
@@ -132,7 +128,7 @@ def finalize_service_name(service_name, service_def, environment_code_name):
 
 	return result
 
-def build_compare_words(lookup, compareto, j_tags):
+def build_compare_words(lookup, compareto, jenkin_build_terms):
 
 	result = False
 
@@ -154,11 +150,12 @@ def build_compare_words(lookup, compareto, j_tags):
 	else:
 		lookup = []
 
+	#aggregate unique values in the two lists
 	res = list(set(compareto) ^ set(lookup))
 
-	if len(res) == 2 and j_tags[0] in res and j_tags[2] in res:
+	if len(res) == 2 and jenkin_build_terms[0] in res and jenkin_build_terms[2] in res:
 		result = True
-	elif len(res) == 1 and (j_tags[0] in res or j_tags[1] in res):
+	elif len(res) == 1 and (jenkin_build_terms[0] in res or jenkin_build_terms[1] in res):
 		result = True
 
 	return result

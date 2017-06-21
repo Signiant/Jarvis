@@ -179,10 +179,10 @@ def main(text):
 		master_data = dict()
 		team_data = dict()
 
-		if "against" in text and len(filter(None, text)) >= 7:
+		if "with" in text and len(filter(None, text)) >= 7:
 
-			master_args = filter(None, text[:text.index("against")])
-			team_args = filter(None, text[text.index("against") + 1:])
+			master_args = filter(None, text[:text.index("with")])
+			team_args = filter(None, text[text.index("with") + 1:])
 
 			#check enetered arguments for validity
 			master_args_eval = eval_args(master_args, regionList)
@@ -446,7 +446,7 @@ def information():
 	jarvis ecs describe|desc <cluster> [in <region/account>]
 	jarvis ecs describe|desc <service> <cluster> [in <region/account>]
 	jarvis ecs list tasks[---<task_name_optional>] running <cluster> [in <region/account>]
-	jarvis ecs compare <cluster> [in <region> <account>] against <cluster> [in <region> <account>]"""
+	jarvis ecs compare <cluster> [in <region> <account>] with <cluster> [in <region> <account>]"""
 
 
 
@@ -557,6 +557,9 @@ def get_in_ecs_compare_data(config, args, args_eval):
 
 	result = dict()
 
+	#Depending on the arguments provided the values for cluster, region and account are determined as follows...
+	#	if the args_eval did not recieve a cluster from user than args_eval == 3
+	#	if the args_eval did recieve a cluster from user than args_eval == 4
 	if args_eval == 3:
 		result['cluster_name'] = None
 		result['region_name'] = args[1]
@@ -587,6 +590,7 @@ def get_in_ecs_compare_data(config, args, args_eval):
 					result['RoleArn'] = None
 					result['team_name'] = config['Clusters'][the_region]['team_name']
 
+	#if no data was pulled from config file than return 0
 	if len(result) <= 3:
 		return 0
 
@@ -597,11 +601,13 @@ def get_in_ecs_compare_data(config, args, args_eval):
 def eval_args(args,regionList):
 	args = filter(None, args)
 
-	if "in" in args:
-		if args[args.index("in") + 1] in regionList:
+	if args.index("in") == 1:
+		if args[2] in regionList:
+			if len(args) == 4:
+				return len(args)
+	elif args.index("in") == 0:
+		if args[1] in regionList:
 			if len(args) == 3:
-				return 3
-			elif len(args) == 4:
-				return 4
+				return len(args)
 	else:
 		return 0

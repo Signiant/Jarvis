@@ -119,6 +119,13 @@ def send_to_slack(val, slack_channel):
         r = requests.post(slack_response_url, json=payload)
     else:
         payload = {
+        "text": query,
+        "attachments": val,
+        "response_type": "ephemeral"
+        }
+        r = requests.post(slack_response_url, json=payload)
+
+        payload = {
         'as_user': False,
         "channel": slack_channel,
         "attachments": val

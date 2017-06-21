@@ -53,6 +53,13 @@ def lambda_handler(event, context):
     print "LOG: The request is: " + str(text)
     print "LOG: The requesting user is: " + param_map['user_name']
 
+    #extract send to slack channel from args
+    sendto_data = None
+    if "sendto:" in text:
+        sendto_data = filter(None, text[text.index("sendto:") + 1:])
+        text = text[:text.index("sendto:")]
+
+
     if param_map['token'] != incoming_token:  # Check for a valid Slack token
         retval = 'invalid incoming Slack token'
 
@@ -79,8 +86,13 @@ def lambda_handler(event, context):
             retval = "I'm afraid I did not understand that command. Use 'jarvis help' for available commands."
             print 'Error: ' + format(str(e))
 
-    post_to_slack(retval)
-    
+    #if sendto: is in args then send jarvis message to slack channel in args
+    if sendto_data:
+        send_to_slack(retval, sendto_data[0])
+    else:
+        post_to_slack(retval)
+
+
 def post_to_slack(val):
 
     if isinstance(val, basestring):
@@ -95,5 +107,20 @@ def post_to_slack(val):
         "text": query,
         "attachments": val,
         "response_type": "ephemeral"
+        }
+        r = requests.post(slack_response_url, json=payload)
+
+def send_to_slack(val, slack_channel):
+    if isinstance(val, basestring):
+        payload = {
+        "text": query + "\n" + val,
+        "response_type": "ephemeral"
+        }
+        r = requests.post(slack_response_url, json=payload)
+    else:
+        payload = {
+        'as_user': False,
+        "channel": slack_channel,
+        "attachments": val
         }
         r = requests.post(slack_response_url, json=payload)

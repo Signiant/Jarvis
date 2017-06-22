@@ -1,6 +1,5 @@
 import boto3
 import logging
-import pprint
 
 # get ecs data from boto call
 def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, env_code_name, the_config, role_arn):
@@ -22,6 +21,7 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
 
 	for cluster in cluster_list:
 		try:
+
 			for account in the_config['Accounts']:
 				if account['AccountName'] == profile_name:
 					sts_client = boto3.client('sts')
@@ -76,7 +76,7 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
 
 	return service_versions
 
-	# Main comparing function
+# compare the versions
 def compare_environment(team_env, master_env, jenkin_build_terms):
 
 	"""""
@@ -97,7 +97,6 @@ def compare_environment(team_env, master_env, jenkin_build_terms):
 			else:
 				result = 3
 
-	# print " MATCH IS: "+team_env +" == " + master_env+" ==> "+str(result)
 	logging.debug("comparing %s and %s result is %s" % (team_env, master_env, result))
 	return result
 
@@ -160,18 +159,21 @@ def build_compare_words(lookup, compareto, jenkin_build_terms):
 
 	return result
 
-def get_build_url(cached_array, lookup_word, prelim_version, j_tags):
+def get_build_url(cached_array, lookup_word, prelim_version, jenkins_tags):
 
 	the_url = None
 
+	#compare the service name to links in the superjenkins_data
+	# set the build_url when a url contains words matching the lookup service name
 	for the_names in cached_array:
-		if build_compare_words(lookup_word, the_names['name'], j_tags):
+		if build_compare_words(lookup_word, the_names['name'], jenkins_tags):
 			the_url = the_names['url']
 
 	symbols_array = [".", "_", "-"]
 
 	build_num = []
 
+	#extract the build number from version
 	for symb in symbols_array:
 		if symb in prelim_version:
 			build_num = prelim_version.split(symb)
@@ -267,8 +269,10 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
 	return compared_array
 
 
+
+
 #main ecs plugin function
-def main_ecs_check_versions(master_array, team_array, superjenkins_data, jenkins_build_tags, team_exclusion_list, config):
+def main_ecs_check_versions(master_array, team_array, jenkins_build_tags, superjenkins_data,team_exclusion_list, config):
 
 	masterdata = dict()
 	teamdata = dict()
@@ -288,6 +292,7 @@ def main_ecs_check_versions(master_array, team_array, superjenkins_data, jenkins
 											  team_array['environment_code_name'],
 											  config,
 											  team_array['RoleArn'])
+
 
 		compared_data = ecs_compare_master_team(team_plugin_data,
 												masterdata,

@@ -176,15 +176,12 @@ def main(text):
 
 	if 'compare' in text:
 		text.remove("compare")
-		master_data = dict()
-		team_data = dict()
 
 		if "with" in text and len(filter(None, text)) >= 7:
 
 			master_args = filter(None, text[:text.index("with")])
 			team_args = filter(None, text[text.index("with") + 1:])
 
-			#check enetered arguments for validity
 			master_args_eval = eval_args(master_args, regionList)
 			team_args_eval = eval_args(team_args, regionList)
 
@@ -193,14 +190,17 @@ def main(text):
 				team_data = get_in_ecs_compare_data(config, team_args, team_args_eval)
 
 				if master_data and team_data:
-					superjenkins_data = get_superjenkins_data(config["General"]["build_link"],
-															  config["General"]["script_tags"]["beginning_tag"],
-															  config["General"]["script_tags"]["ending_tag"])
+
+					# retrieves the json from superjenkins with all build link data
+					superjenkins_data = get_superjenkins_data(config["General"]["script_tags"]["beginning_tag"],
+															  config["General"]["script_tags"]["ending_tag"],
+															  config["General"]["build_link"],
+															  config["General"]["my_build_key"])
 
 					compared_data = main_ecs_check_versions(master_data,
 															team_data,
-															superjenkins_data,
 															config["General"]["jenkins"]["branch_equivalent_tags"],
+															superjenkins_data,
 															team_data['service_exclude_list'],
 															config)
 
@@ -526,30 +526,46 @@ def tasks_get_lookup_term(text):
             else:
                 return data[(data.lower().find('---') + 3):]
 
+# retrieve json data from super jenkins for build urls
+def get_superjenkins_data(beginning_script_tag, ending_script_tag, superjenkins_link=None,superjenkins_key=None):
 
-#retrieve json data from super jenkins for build urls
-def get_superjenkins_data(superjenkins_link,beginning_script_tag,ending_script_tag):
+	cached_items = None
+	cached_array = None
 
-    # get json to get individual services/application build links
-    cached_items = ""
-    cached_array = ""
+	try:
+		s3 = boto3.resource('s3')
+		logging.info("Retrieving file from s3 bucket for superjenkins data")
 
-    try:
-        returned_data = requests.get(superjenkins_link)
-        returned_data_iterator = returned_data.iter_lines()
+		my_bucket = superjenkins_key[:superjenkins_key.find("/")]
+		my_key = superjenkins_key[superjenkins_key.find("/") + 1:]
 
-        for items in returned_data_iterator:
-            if beginning_script_tag in items:
-                cached_items = items.replace(beginning_script_tag, "").replace(ending_script_tag, "")
-                break
+		obj = s3.Object(my_bucket, my_key)
+		cached_items = obj.get()['Body'].read()
+		cached_array = json.loads(cached_items)
+		logging.info("Superjenkins data retrieved and json loaded")
 
-        for items in json.loads(cached_items):
-            cached_array = json.loads(cached_items)[items]
+	except Exception, e:
+		print "Error in retrieving and creating json for superjenkins_key ==> " + str(e)
 
-    except Exception, e:
-        print "Error in retrieving and creating json for build urls ==> " + str(e)
+	# if the user does not enter super_jenkins links which is s3 bucket and key or calling s3 bucket fails
+	if cached_array == None:
+		try:
+			returned_data = requests.get(superjenkins_link)
+			returned_data_iterator = returned_data.iter_lines()
 
-    return cached_array
+			for items in returned_data_iterator:
+				if beginning_script_tag in items:
+					cached_items = items.replace(beginning_script_tag, "").replace(ending_script_tag,
+																				   "")
+					break
+
+			for items in json.loads(cached_items):
+				cached_array = json.loads(cached_items)[items]
+
+		except Exception, e:
+			print "Error in retrieving and creating json from build_json ==> " + str(e)
+
+	return cached_array
 
 
 #retrieve data from config files for compare
@@ -597,7 +613,7 @@ def get_in_ecs_compare_data(config, args, args_eval):
 	return result
 
 
-#evaluate arguments for compare
+#inspect arguments entered by user
 def eval_args(args,regionList):
 	args = filter(None, args)
 

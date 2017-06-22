@@ -3,8 +3,13 @@ import json
 import re
 import math
 import os.path
+import requests
+import logging
+import pprint
 from datetime import *
 import common
+import compare_output
+from ecs_compares import main_ecs_check_versions
 
 
 def main(text):
@@ -169,6 +174,48 @@ def main(text):
 				print e
 				return "Cluster " + text[0] + " was not found in region " + region
 
+	if 'compare' in text:
+		text.remove("compare")
+
+		if "with" in text and len(filter(None, text)) >= 7:
+
+			master_args = filter(None, text[:text.index("with")])
+			team_args = filter(None, text[text.index("with") + 1:])
+
+			master_args_eval = eval_args(master_args, regionList)
+			team_args_eval = eval_args(team_args, regionList)
+
+			if master_args_eval and team_args_eval:
+				master_data = get_in_ecs_compare_data(config, master_args, master_args_eval)
+				team_data = get_in_ecs_compare_data(config, team_args, team_args_eval)
+
+				if master_data and team_data:
+
+					# retrieves the json from superjenkins with all build link data
+					superjenkins_data = get_superjenkins_data(config["General"]["script_tags"]["beginning_tag"],
+															  config["General"]["script_tags"]["ending_tag"],
+															  config["General"]["build_link"],
+															  config["General"]["my_build_key"])
+
+					compared_data = main_ecs_check_versions(master_data,
+															team_data,
+															config["General"]["jenkins"]["branch_equivalent_tags"],
+															superjenkins_data,
+															team_data['service_exclude_list'],
+															config)
+
+					attachments = compare_output.slack_payload(compared_data, team_data['team_name'])
+
+					return attachments
+
+				else:
+					return "Values were not retrieved"
+
+			else:
+				return "Invalid region or account information entered"
+
+		else:
+			return "Missing information to complete comparison. "
 
 	elif 'describe' in text or 'desc' in text:
 		cw = session.client('cloudwatch', region_name=region)
@@ -398,7 +445,8 @@ def information():
 	jarvis ecs list services <cluster> [in <region/account>]
 	jarvis ecs describe|desc <cluster> [in <region/account>]
 	jarvis ecs describe|desc <service> <cluster> [in <region/account>]
-	jarvis ecs list tasks[---<task_name_optional>] running <cluster> [in <region/account>]"""
+	jarvis ecs list tasks[---<task_name_optional>] running <cluster> [in <region/account>]
+	jarvis ecs compare <cluster> [in <region> <account>] with <cluster> [in <region> <account>]"""
 
 
 
@@ -478,6 +526,113 @@ def tasks_get_lookup_term(text):
             else:
                 return data[(data.lower().find('---') + 3):]
 
+# retrieve json data from super jenkins for build urls
+def get_superjenkins_data(beginning_script_tag, ending_script_tag, superjenkins_link=None,superjenkins_key=None):
+
+	cached_items = None
+	cached_array = None
+
+	# if call to s3 bucket to recieve superjenkins data fails than call local superjenkins_link
+	try:
+		s3 = boto3.resource('s3')
+		logging.info("Retrieving file from s3 bucket for superjenkins data")
+
+		my_bucket = superjenkins_key[:superjenkins_key.find("/")]
+		my_key = superjenkins_key[superjenkins_key.find("/") + 1:]
+
+		obj = s3.Object(my_bucket, my_key)
+		json_body = obj.get()['Body'].read()
+		returned_data_iterator = json_body.iter_lines()
+
+		for items in returned_data_iterator:
+			if beginning_script_tag in items:
+				cached_items = items.replace(beginning_script_tag, "").replace(ending_script_tag, "")
+				break
+
+		for items in json.loads(cached_items):
+			cached_array = json.loads(cached_items)[items]
+
+		logging.info("Superjenkins data retrieved and json loaded")
+
+	except Exception, e:
+		print "Error in retrieving and creating json for superjenkins_key ==> " + str(e)
 
 
+	if cached_array == None:
+		try:
+			returned_data = requests.get(superjenkins_link)
+			returned_data_iterator = returned_data.iter_lines()
 
+			for items in returned_data_iterator:
+				if beginning_script_tag in items:
+					cached_items = items.replace(beginning_script_tag, "").replace(ending_script_tag,"")
+					break
+
+			for items in json.loads(cached_items):
+				cached_array = json.loads(cached_items)[items]
+
+		except Exception, e:
+			print "Error in retrieving and creating json from build_json ==> " + str(e)
+
+	return cached_array
+
+
+#retrieve data from config files for compare
+def get_in_ecs_compare_data(config, args, args_eval):
+
+	result = dict()
+
+	#Depending on the arguments provided the values for cluster, region and account are determined as follows...
+	#	if the args_eval did not recieve a cluster from user than args_eval == 3
+	#	if the args_eval did recieve a cluster from user than args_eval == 4
+	if args_eval == 3:
+		result['cluster_name'] = None
+		result['region_name'] = args[1]
+		result['account'] = args[2]
+	elif args_eval == 4:
+		result['cluster_name'] = args[0]
+		result['region_name'] = args[2]
+		result['account'] = args[3]
+
+	for account in config['Accounts']:
+		if account['AccountName'] == result['account']:
+			result['RoleArn'] = account['RoleArn']
+			for the_region in account['Clusters']:
+				if the_region == result['region_name']:
+					if result['cluster_name'] == None:
+						result['cluster_name'] = account['Clusters'][the_region]['cluster_list']
+					result['environment_code_name'] = account['Clusters'][the_region]['environment_code_name']
+					result['service_exclude_list'] = account['Clusters'][the_region]['service_exclude_list']
+					result['team_name'] = account['Clusters'][the_region]['team_name']
+	if result.has_key('environment_code_name') == False:
+		for the_region in config['Clusters']:
+			if the_region == result['region_name']:
+				if result['account'] == config['Clusters'][the_region]['team_name']:
+					if result['cluster_name'] == None:
+						result['cluster_name'] = config['Clusters'][the_region]['cluster_list']
+					result['environment_code_name'] = config['Clusters'][the_region]['environment_code_name']
+					result['service_exclude_list'] = config['Clusters'][the_region]['service_exclude_list']
+					result['RoleArn'] = None
+					result['team_name'] = config['Clusters'][the_region]['team_name']
+
+	#if no data was pulled from config file than return 0
+	if len(result) <= 3:
+		return 0
+
+	return result
+
+
+#inspect arguments entered by user
+def eval_args(args,regionList):
+	args = filter(None, args)
+
+	if args.index("in") == 1:
+		if args[2] in regionList:
+			if len(args) == 4:
+				return len(args)
+	elif args.index("in") == 0:
+		if args[1] in regionList:
+			if len(args) == 3:
+				return len(args)
+	else:
+		return 0

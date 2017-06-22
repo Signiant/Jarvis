@@ -11,7 +11,7 @@ import os.path
 from datetime import *
 import common
 import compare_output
-import ecs_compares
+from .ecs_compares import main_ecs_check_versions
 
 
 def main(text):
@@ -199,7 +199,7 @@ def main(text):
 															  config["General"]["build_link"],
 															  config["General"]["my_build_key"])
 
-					compared_data = ecs_compares.main_ecs_check_versions(master_data,
+					compared_data = main_ecs_check_versions(master_data,
 															team_data,
 															config["General"]["jenkins"]["branch_equivalent_tags"],
 															superjenkins_data,

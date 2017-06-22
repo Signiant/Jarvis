@@ -40,7 +40,7 @@ def add_indent_fields(fields):
     return 1
 
 #format time if data available
-def form_the_time(thetime):
+def format_the_time(thetime):
 
     if thetime == "":
         time_updated =""
@@ -49,7 +49,7 @@ def form_the_time(thetime):
 
     return time_updated
 
-#compress string is larger than 30 length
+#compress string is larger than 28 chars
 def shorten_input(thestring):
     if len(thestring) > 28:
         thestring = thestring[:25]+"..."
@@ -63,7 +63,7 @@ def append_to_field(fields, value, mastername):
     fields.append({
         # adding team data
             "title": shorten_input(value['team_env']),
-            "value": value['team_version'] + form_the_time(value["team_updateddate"]),
+            "value": value['team_version'] + format_the_time(value["team_updateddate"]),
             "short": "true"
         })
 
@@ -71,7 +71,7 @@ def append_to_field(fields, value, mastername):
         # adding master data
         #--trying mastername+": "+
         'title': shorten_input(value['master_env']),
-        'value': value['master_version'] + form_the_time(value["master_updateddate"]),
+        'value': value['master_version'] + format_the_time(value["master_updateddate"]),
         'short': "true"
     })
     #adding more slack fields to create vertical spacing

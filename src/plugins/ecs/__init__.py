@@ -532,6 +532,7 @@ def get_superjenkins_data(beginning_script_tag, ending_script_tag, superjenkins_
 	cached_items = None
 	cached_array = None
 
+	# if call to s3 bucket to recieve superjenkins data fails than call local superjenkins_link
 	try:
 		s3 = boto3.resource('s3')
 		logging.info("Retrieving file from s3 bucket for superjenkins data")
@@ -540,14 +541,23 @@ def get_superjenkins_data(beginning_script_tag, ending_script_tag, superjenkins_
 		my_key = superjenkins_key[superjenkins_key.find("/") + 1:]
 
 		obj = s3.Object(my_bucket, my_key)
-		cached_items = obj.get()['Body'].read()
-		cached_array = json.loads(cached_items)
+		json_body = obj.get()['Body'].read()
+		returned_data_iterator = json_body.iter_lines()
+
+		for items in returned_data_iterator:
+			if beginning_script_tag in items:
+				cached_items = items.replace(beginning_script_tag, "").replace(ending_script_tag, "")
+				break
+
+		for items in json.loads(cached_items):
+			cached_array = json.loads(cached_items)[items]
+
 		logging.info("Superjenkins data retrieved and json loaded")
 
 	except Exception, e:
 		print "Error in retrieving and creating json for superjenkins_key ==> " + str(e)
 
-	# if the user does not enter super_jenkins links which is s3 bucket and key or calling s3 bucket fails
+
 	if cached_array == None:
 		try:
 			returned_data = requests.get(superjenkins_link)
@@ -555,8 +565,7 @@ def get_superjenkins_data(beginning_script_tag, ending_script_tag, superjenkins_
 
 			for items in returned_data_iterator:
 				if beginning_script_tag in items:
-					cached_items = items.replace(beginning_script_tag, "").replace(ending_script_tag,
-																				   "")
+					cached_items = items.replace(beginning_script_tag, "").replace(ending_script_tag,"")
 					break
 
 			for items in json.loads(cached_items):

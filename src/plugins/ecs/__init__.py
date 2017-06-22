@@ -6,10 +6,12 @@ import os.path
 import requests
 import logging
 import pprint
+import sys
+import os.path
 from datetime import *
 import common
 import compare_output
-from ecs_compares import main_ecs_check_versions
+import ecs_compares
 
 
 def main(text):
@@ -197,7 +199,7 @@ def main(text):
 															  config["General"]["build_link"],
 															  config["General"]["my_build_key"])
 
-					compared_data = main_ecs_check_versions(master_data,
+					compared_data = ecs_compares.main_ecs_check_versions(master_data,
 															team_data,
 															config["General"]["jenkins"]["branch_equivalent_tags"],
 															superjenkins_data,

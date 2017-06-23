@@ -10,6 +10,10 @@ import sys
 from datetime import *
 import common
 import compare_output
+
+#append path of ecs_compares module to sys.path
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(dir_path+"/ecs_compares")
 import ecs_compares
 
 

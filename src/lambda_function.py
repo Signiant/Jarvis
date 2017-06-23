@@ -4,9 +4,6 @@ from collections import defaultdict
 import requests
 import urllib
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(dir_path+"/plugins/ecs/ecs_compares")
-
 pluginFolder = "./plugins"
 mainFile = "__init__"
 

@@ -6,10 +6,11 @@ import os.path
 import requests
 import logging
 import pprint
+import sys
 from datetime import *
 import common
 import compare_output
-from ecs_compares import main_ecs_check_versions
+from .ecs_compares import main_ecs_check_versions
 
 
 def main(text):

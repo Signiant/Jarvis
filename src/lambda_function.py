@@ -55,11 +55,10 @@ def lambda_handler(event, context):
 
     #extract send to slack channel from args
     sendto_data = None
-    if "sendto:" in text:
-        sendto_data = filter(None, text[text.index("sendto:") + 1:])
-        text = text[:text.index("sendto:")]
-
-
+    if "sendto" in text:
+        sendto_data = filter(None, text[text.index("sendto") + 1:])
+        text = text[:text.index("sendto")]
+        
     if param_map['token'] != incoming_token:  # Check for a valid Slack token
         retval = 'invalid incoming Slack token'
 
@@ -118,6 +117,13 @@ def send_to_slack(val, slack_channel):
         }
         r = requests.post(slack_response_url, json=payload)
     else:
+        #slack parses out the # and @ chars into the below char sequences,
+        # this reattaches the correct char to reform slack channel
+        if "%23" in slack_channel:
+            slack_channel.replace("%23", "#")
+        elif "%40" in slack_channel:
+            slack_channel.replace("%40", "@")
+
         payload = {
         "text": query,
         "attachments": val,

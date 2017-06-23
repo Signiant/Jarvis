@@ -15,7 +15,7 @@ import compare_output
 #dir_path = os.path.dirname(os.path.realpath(__file__))
 #sys.path.insert(0,dir_path+"/ecs_compares")
 #import ecs_compares
-from .plugins.ecs.ecs_compares import ecs_compares
+from Jarvis.src.plugins.ecs.ecs_compares import ecs_compares
 
 def main(text):
 	regionList = ['us-east-1', 'us-west-1', 'us-west-2', 'eu-west-1', 'ap-northeast-1', 'ap-southeast-2']

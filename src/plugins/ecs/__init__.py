@@ -7,7 +7,6 @@ import requests
 import logging
 import pprint
 import sys
-import os.path
 from datetime import *
 import common
 import compare_output

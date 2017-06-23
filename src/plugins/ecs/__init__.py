@@ -12,7 +12,8 @@ import common
 import compare_output
 
 #append path of ecs_compares module to sys.path
-sys.path.append("./ecs_compares")
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0,dir_path+"/ecs_compares")
 import ecs_compares
 
 

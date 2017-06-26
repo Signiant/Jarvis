@@ -123,14 +123,6 @@ def send_to_slack(val, slack_channel):
             slack_channel.replace("%23", "#")
         elif "%40" in slack_channel:
             slack_channel.replace("%40", "@")
-        """"
-        payload = {
-        "text": query,
-        "attachments": val,
-        "response_type": "ephemeral"
-        }
-        r = requests.post(slack_response_url, json=payload)
-        """"
         payload = {
         'as_user': False,
         "channel": slack_channel,

@@ -632,11 +632,11 @@ def get_in_ecs_compare_data(config, args, args_eval):
 def eval_args(args,regionList):
 	args = filter(None, args)
 
-	if args.index("in") == 1:
+	if args.index("into") == 1:
 		if args[2] in regionList:
 			if len(args) == 4:
 				return len(args)
-	elif args.index("in") == 0:
+	elif args.index("into") == 0:
 		if args[1] in regionList:
 			if len(args) == 3:
 				return len(args)

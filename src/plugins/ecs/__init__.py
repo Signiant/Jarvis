@@ -180,7 +180,9 @@ def main(text):
 
 	elif 'compare' in text:
 		text.remove("compare")
-
+		print "current arguments"
+		print text
+		
 		if "with" in text and len(filter(None, text)) >= 7:
 
 			master_args = filter(None, text[:text.index("with")])

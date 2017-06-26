@@ -178,7 +178,7 @@ def main(text):
 				print e
 				return "Cluster " + text[0] + " was not found in region " + region
 
-	if 'compare' in text:
+	elif 'compare' in text:
 		text.remove("compare")
 
 		if "with" in text and len(filter(None, text)) >= 7:

@@ -5,6 +5,7 @@ import math
 import os.path
 from datetime import *
 import common
+import sys
 
 #append path of the current subdirectory module to sys.path so any modules in the current directory will load
 dir_path = os.path.dirname(os.path.realpath(__file__))

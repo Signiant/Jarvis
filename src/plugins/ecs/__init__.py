@@ -458,7 +458,7 @@ def information():
 	jarvis ecs describe|desc <cluster> [in <region/account>]
 	jarvis ecs describe|desc <service> <cluster> [in <region/account>]
 	jarvis ecs list tasks[---<task_name_optional>] running <cluster> [in <region/account>]
-	jarvis ecs compare <cluster> into <region> <account> with <cluster> into <region> <account>"""
+	jarvis ecs compare [<cluster>] into <region> <account> with [<cluster>] into <region> <account>"""
 
 
 
@@ -549,8 +549,8 @@ def get_superjenkins_data(beginning_script_tag, ending_script_tag, superjenkins_
 		s3 = boto3.resource('s3')
 		logging.info("Retrieving file from s3 bucket for superjenkins data")
 
-		my_bucket = superjenkins_link[:superjenkins_link.find("/")]
-		my_key = superjenkins_link[superjenkins_link.find("/")+1:]
+		my_bucket = superjenkins_key[:superjenkins_key.find("/")]
+		my_key = superjenkins_key[superjenkins_key.find("/")+1:]
 
 		obj = s3.Object(my_bucket, my_key)
 		json_body = obj.get()['Body'].read()

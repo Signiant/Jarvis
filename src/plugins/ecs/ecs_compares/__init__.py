@@ -285,8 +285,6 @@ def main_ecs_check_versions(master_array, team_array, jenkins_build_tags, superj
                                                 jenkins_build_tags,
                                                 team_exclusion_list)
 
-        teamdata = compared_data
-
-    return teamdata
+    return compared_data
 
 

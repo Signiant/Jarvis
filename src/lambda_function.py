@@ -49,7 +49,6 @@ def lambda_handler(event, context):
     slack_response_url = param_map['response_url']
     slack_response_url = urllib.unquote(slack_response_url)
     
-    print "LOG: The slack response url: " + slack_response_url
     print "LOG: The request came from: " + slack_channel
     print "LOG: The request is: " + str(text)
     print "LOG: The requesting user is: " + param_map['user_name']

@@ -3,6 +3,7 @@ import os, sys
 from collections import defaultdict
 import requests
 import urllib
+import logging
 
 pluginFolder = "./plugins"
 mainFile = "__init__"
@@ -53,14 +54,14 @@ def lambda_handler(event, context):
     print "LOG: The request is: " + str(text)
     print "LOG: The requesting user is: " + param_map['user_name']
 
+    if param_map['token'] != incoming_token:  # Check for a valid Slack token
+        retval = 'invalid incoming Slack token'
+
     #extract send to slack channel from args
     sendto_data = None
     if "sendto" in text:
         sendto_data = filter(None, text[text.index("sendto") + 1:])
         text = text[:text.index("sendto")]
-        
-    if param_map['token'] != incoming_token:  # Check for a valid Slack token
-        retval = 'invalid incoming Slack token'
 
     elif text[0] == 'help':
         if len(text) > 1:
@@ -85,6 +86,10 @@ def lambda_handler(event, context):
             retval = "I'm afraid I did not understand that command. Use 'jarvis help' for available commands."
             print 'Error: ' + format(str(e))
 
+    logging.info("******************return value of slack payload*********************")
+    logging.info(retval)
+    logging.info("*********************************************************************")
+
     #if sendto: is in args then send jarvis message to slack channel in args
     if sendto_data:
         send_to_slack(retval, sendto_data[0])
@@ -101,6 +106,12 @@ def post_to_slack(val):
         }
 
         r = requests.post(slack_response_url, json=payload)
+
+        if r.status_code != 200:
+            raise ValueError(
+                'In post_to_slack isinstance Slack returned status code %s, the response text is %s' % (r.status_code, r.text)
+            )
+
     else:
         payload = {
         "text": query,
@@ -109,23 +120,56 @@ def post_to_slack(val):
         }
         r = requests.post(slack_response_url, json=payload)
 
+        if r.status_code != 200:
+            raise ValueError(
+                'In post_to_slack Slack returned status code %s, the response text is %s' % (r.status_code, r.text)
+            )
+
 def send_to_slack(val, slack_channel):
     if isinstance(val, basestring):
+
         payload = {
         "text": query + "\n" + val,
         "response_type": "ephemeral"
         }
         r = requests.post(slack_response_url, json=payload)
+
+        if r.status_code != 200:
+            raise ValueError(
+                'In send_to_slack isinstance Slack returned status code %s, the response text is %s' % (r.status_code, r.text)
+            )
+
     else:
         #slack parses out the # and @ chars into the below char sequences,
         # this reattaches the correct char to reform slack channel
-        if "%23" in slack_channel:
-            slack_channel.replace("%23", "#")
-        elif "%40" in slack_channel:
-            slack_channel.replace("%40", "@")
+
         payload = {
-        'as_user': False,
-        "channel": slack_channel,
-        "attachments": val
+        "text": query,
+        "attachments": val,
+        "response_type": "ephemeral"
         }
         r = requests.post(slack_response_url, json=payload)
+
+        if r.status_code != 200:
+            raise ValueError(
+                'In send_to_slack ephemeral Slack returned status code %s, the response text is %s' % (r.status_code, r.text)
+            )
+
+        #after sending a message to your currnet channel,
+        #  then send another to the desired slack channel
+
+        slack_sendto_url = urllib.unquote(slack_channel)
+
+        payload = {
+            "text": query,
+            "attachments": val,
+            "response_type": "in-channel"
+        }
+        g = requests.post(slack_sendto_url, json=payload)
+
+        if g.status_code != 200:
+            raise ValueError(
+                'In send_to_slack post Slack returned status code %s, the response text is %s' % (g.status_code, g.text)
+            )
+
+

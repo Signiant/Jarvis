@@ -150,10 +150,10 @@ def create_plugin_format(thedata, thetitle_beginning):
 
 
 #plugin data array is empty
-def no_elements_found(thetitle_beginning):
+def no_elements_found(thetitle_beginning,message=None):
 
     theattachment = []
-    thetitle = thetitle_beginning+" not found"
+    thetitle = thetitle_beginning+message
     the_color = "#9B30FF"
     theattachment.append({'title': thetitle.title(), 'color': the_color})
     return theattachment
@@ -169,11 +169,15 @@ def slack_payload(data_array, eachteam):
     logging.debug("printing data array in output_slack_payload")
     logging.debug(data_array)
 
-    for theplugin in data_array:
-        if data_array[theplugin]:
-            attachments = attachments + create_plugin_format(data_array[theplugin], theplugin)
-        else:
-            attachments = attachments + no_elements_found(theplugin)
+    if data_array:
+        for theplugin in data_array:
+            if data_array[theplugin]:
+                attachments = attachments + create_plugin_format(data_array[theplugin], theplugin)
+            else:
+                attachments = attachments + no_elements_found(theplugin, " not found")
+    else:
+        attachments = attachments + no_elements_found("Unable to Retrieve Data")
+
 
     logging.debug("printing attachments")
     logging.debug(attachments)

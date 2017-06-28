@@ -2,14 +2,13 @@ import boto3
 import logging
 
 # get ecs data from boto call
-def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, env_code_name, the_config, role_arn):
-    service_versions = []
+def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, env_code_name, role_arn):
 
+    service_versions = []
+    cluster_list = []
     awsKeyId = None
     awsSecretKey = None
     awsSessionToken = None
-
-    cluster_list = []
 
     # get list of clusters
     if type(cluster_name) == list:
@@ -21,21 +20,18 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
     for cluster in cluster_list:
         try:
 
-            for account in the_config['Accounts']:
-                if account['AccountName'] == profile_name:
-                    sts_client = boto3.client('sts')
-                    assumedRole = sts_client.assume_role(RoleArn=role_arn, RoleSessionName="AssumedRole")
-                    awsKeyId = assumedRole['Credentials']['AccessKeyId']
-                    awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
-                    awsSessionToken = assumedRole['Credentials']['SessionToken']
-                    break
+            sts_client = boto3.client('sts')
+            if role_arn:
+                assumedRole = sts_client.assume_role(RoleArn=role_arn, RoleSessionName="AssumedRole")
+                awsKeyId = assumedRole['Credentials']['AccessKeyId']
+                awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
+                awsSessionToken = assumedRole['Credentials']['SessionToken']
 
-            session = boto3.session.Session(aws_access_key_id=awsKeyId, aws_secret_access_key=awsSecretKey,
-                                            aws_session_token=awsSessionToken)
+            session = boto3.session.Session(aws_access_key_id=awsKeyId, aws_secret_access_key=awsSecretKey, aws_session_token=awsSessionToken)
             client = session.client("ecs", region_name=region_name)
-
-            service_paginator = client.get_paginator('list_services')
-            service_iterator = service_paginator.paginate(cluster=cluster)
+            if client:
+                service_paginator = client.get_paginator('list_services')
+                service_iterator = service_paginator.paginate(cluster=cluster)
 
         except Exception, e:
             print("Error obtaining list of ECS services for " + cluster + " (" + str(e) + ")")
@@ -108,8 +104,6 @@ def finalize_service_name(service_name, service_def, environment_code_name):
 
     def_name_list = def_name_mod.split("+")
     service_name_list = service_name_mod.split("+")
-
-    initial_def_name_list = def_name_list
 
     for sname in service_name_list:
         if sname in def_name_list:
@@ -268,15 +262,13 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
 
 
 # main ecs plugin function
-def main_ecs_check_versions(master_array, team_array, jenkins_build_tags, superjenkins_data, team_exclusion_list,
-                            config):
+def main_ecs_check_versions(master_array, team_array, jenkins_build_tags, superjenkins_data, team_exclusion_list):
     masterdata = dict()
     teamdata = dict()
 
     master_plugin_data = ecs_check_versions(master_array['account'], master_array['region_name'],
                                             master_array['cluster_name'], "",
                                             master_array['environment_code_name'],
-                                            config,
                                             master_array['RoleArn'])
 
     if master_plugin_data:
@@ -285,7 +277,6 @@ def main_ecs_check_versions(master_array, team_array, jenkins_build_tags, superj
         team_plugin_data = ecs_check_versions(team_array['account'], team_array['region_name'],
                                               team_array['cluster_name'], "",
                                               team_array['environment_code_name'],
-                                              config,
                                               team_array['RoleArn'])
 
         compared_data = ecs_compare_master_team(team_plugin_data,
@@ -294,6 +285,6 @@ def main_ecs_check_versions(master_array, team_array, jenkins_build_tags, superj
                                                 jenkins_build_tags,
                                                 team_exclusion_list)
 
-        teamdata = compared_data
+    return compared_data
 
-    return teamdata
+

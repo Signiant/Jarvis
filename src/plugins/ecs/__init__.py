@@ -16,6 +16,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
 import ecs_compares
 
+
 def main(text):
 	regionList = ['us-east-1', 'us-west-1', 'us-west-2', 'eu-west-1', 'ap-northeast-1', 'ap-southeast-2']
 	region = regionList[0]
@@ -180,11 +181,10 @@ def main(text):
 
 	elif 'compare' in text:
 		text.remove("compare")
-		print "current arguments"
-		print text
 		
-		if "with" in text and len(filter(None, text)) >= 7:
+		if "with" in text and len(filter(None, text)) > 6 and len(filter(None, text)) < 10:
 
+			#extract arguments from text for master and team ecs data
 			master_args = filter(None, text[:text.index("with")])
 			team_args = filter(None, text[text.index("with") + 1:])
 
@@ -192,8 +192,19 @@ def main(text):
 			team_args_eval = eval_args(team_args, regionList)
 
 			if master_args_eval and team_args_eval:
-				master_data = get_in_ecs_compare_data(config, master_args, master_args_eval)
-				team_data = get_in_ecs_compare_data(config, team_args, team_args_eval)
+
+				config = None
+
+				#load config file
+				if os.path.isfile("./aws.config"):
+					with open("aws.config") as f:
+						config = json.load(f)
+
+				if config:
+					master_data = get_in_ecs_compare_data(config, master_args, master_args_eval)
+					team_data = get_in_ecs_compare_data(config, team_args, team_args_eval)
+				else:
+					return "Config file was not loaded"
 
 				if master_data and team_data:
 
@@ -207,8 +218,7 @@ def main(text):
 															team_data,
 															config["General"]["jenkins"]["branch_equivalent_tags"],
 															superjenkins_data,
-															team_data['service_exclude_list'],
-															config)
+															team_data['service_exclude_list'])
 
 					attachments = compare_output.slack_payload(compared_data, team_data['team_name'])
 
@@ -452,7 +462,7 @@ def information():
 	jarvis ecs describe|desc <cluster> [in <region/account>]
 	jarvis ecs describe|desc <service> <cluster> [in <region/account>]
 	jarvis ecs list tasks[---<task_name_optional>] running <cluster> [in <region/account>]
-	jarvis ecs compare <cluster> [in <region> <account>] with <cluster> [in <region> <account>]"""
+	jarvis ecs compare [<cluster>] into <region> <account> with [<cluster>] into <region> <account>"""
 
 
 
@@ -477,8 +487,6 @@ def get_task_list(next_token=None, cluster=None, ecs=None):
 
 
 def parse_tasks(task_list, lookup_term, plugin):
-
-
     ''' Parse task_list and return a dict containing family:count'''
     task_families = {}
     for task in task_list:
@@ -544,24 +552,22 @@ def get_superjenkins_data(beginning_script_tag, ending_script_tag, superjenkins_
 		logging.info("Retrieving file from s3 bucket for superjenkins data")
 
 		my_bucket = superjenkins_key[:superjenkins_key.find("/")]
-		my_key = superjenkins_key[superjenkins_key.find("/") + 1:]
+		my_key = superjenkins_key[superjenkins_key.find("/")+1:]
 
 		obj = s3.Object(my_bucket, my_key)
 		json_body = obj.get()['Body'].read()
-		returned_data_iterator = json_body.iter_lines()
 
-		for items in returned_data_iterator:
-			if beginning_script_tag in items:
-				cached_items = items.replace(beginning_script_tag, "").replace(ending_script_tag, "")
-				break
+		start = json_body.index(beginning_script_tag) + len(beginning_script_tag)
+		end = json_body.index(ending_script_tag, start)
+		cached_items = json.loads(json_body[start:end])
 
-		for items in json.loads(cached_items):
-			cached_array = json.loads(cached_items)[items]
+		for items in cached_items:
+			cached_array = cached_items[items]
 
 		logging.info("Superjenkins data retrieved and json loaded")
 
 	except Exception, e:
-		print "Error in retrieving and creating json for superjenkins_key ==> " + str(e)
+		print "Error in retrieving and creating json from s3 superjenkins_key ==> " + str(e)
 
 
 	if cached_array == None:
@@ -578,7 +584,7 @@ def get_superjenkins_data(beginning_script_tag, ending_script_tag, superjenkins_
 				cached_array = json.loads(cached_items)[items]
 
 		except Exception, e:
-			print "Error in retrieving and creating json from build_json ==> " + str(e)
+			print "Error in retrieving and creating json from superjenkins ==> " + str(e)
 
 	return cached_array
 

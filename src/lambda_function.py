@@ -129,6 +129,12 @@ def post_to_slack(val):
 def send_to_slack(val, sendto_slack_channel):
 	#this gives easy access to incoming webhook
 	sendto_webhook = get_incoming_webhook()
+	
+	if sendto_slack_channel:
+		if "%40" in sendto_slack_channel:
+		    strings = "@"+sendto_slack_channel[len("%40"):]
+		elif "%23" in sendto_slack_channel:
+		    strings = "#" + sendto_slack_channel[len("%23"):]
 
 	if isinstance(val, basestring):
 		try:

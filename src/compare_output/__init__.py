@@ -161,9 +161,6 @@ def no_elements_found(thetitle_beginning,message=None):
 #main output to slack function
 def slack_payload(data_array, eachteam):
 
-    print "output compare"
-    pprint.pprint(data_array)
-
     attachments = []
 
     logging.debug("printing data array in output_slack_payload")

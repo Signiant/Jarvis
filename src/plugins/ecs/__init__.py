@@ -182,7 +182,7 @@ def main(text):
 	elif 'compare' in text:
 		text.remove("compare")
 		
-		if "with" in text and len(filter(None, text)) >= 7:
+		if "with" in text and len(filter(None, text)) > 6 and len(filter(None, text)) < 10:
 
 			#extract arguments from text for master and team ecs data
 			master_args = filter(None, text[:text.index("with")])
@@ -193,13 +193,18 @@ def main(text):
 
 			if master_args_eval and team_args_eval:
 
+				config = None
+
 				#load config file
 				if os.path.isfile("./aws.config"):
 					with open("aws.config") as f:
 						config = json.load(f)
 
-				master_data = get_in_ecs_compare_data(config, master_args, master_args_eval)
-				team_data = get_in_ecs_compare_data(config, team_args, team_args_eval)
+				if config:
+					master_data = get_in_ecs_compare_data(config, master_args, master_args_eval)
+					team_data = get_in_ecs_compare_data(config, team_args, team_args_eval)
+				else:
+					return "Config file was not loaded"
 
 				if master_data and team_data:
 
@@ -213,8 +218,7 @@ def main(text):
 															team_data,
 															config["General"]["jenkins"]["branch_equivalent_tags"],
 															superjenkins_data,
-															team_data['service_exclude_list'],
-															config)
+															team_data['service_exclude_list'])
 
 					attachments = compare_output.slack_payload(compared_data, team_data['team_name'])
 
@@ -483,8 +487,6 @@ def get_task_list(next_token=None, cluster=None, ecs=None):
 
 
 def parse_tasks(task_list, lookup_term, plugin):
-
-
     ''' Parse task_list and return a dict containing family:count'''
     task_families = {}
     for task in task_list:

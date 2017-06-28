@@ -4,6 +4,7 @@ from collections import defaultdict
 import requests
 import urllib
 import logging
+import json
 
 pluginFolder = "./plugins"
 mainFile = "__init__"
@@ -24,6 +25,15 @@ def getAllPlugins():
         info = imp.find_module(mainFile, [location])
         plugins.append({"name": i, "info": info})
     return plugins
+
+#retrieve the incoming webhook
+def get_incoming_webhook():
+	config = None
+	# load config file
+	if os.path.isfile("./aws.config"):
+		with open("aws.config") as f:
+			config = json.load(f)
+	return config['General']["webhook_url"]
 
 def loadPlugin(pluginName):
     return imp.load_source(pluginName, os.path.join(pluginFolder, pluginName, mainFile + ".py"))
@@ -54,14 +64,16 @@ def lambda_handler(event, context):
     print "LOG: The request is: " + str(text)
     print "LOG: The requesting user is: " + param_map['user_name']
 
-    if param_map['token'] != incoming_token:  # Check for a valid Slack token
-        retval = 'invalid incoming Slack token'
 
     #extract send to slack channel from args
     sendto_data = None
     if "sendto" in text:
         sendto_data = filter(None, text[text.index("sendto") + 1:])
         text = text[:text.index("sendto")]
+
+
+    if param_map['token'] != incoming_token:  # Check for a valid Slack token
+        retval = 'invalid incoming Slack token'
 
     elif text[0] == 'help':
         if len(text) > 1:
@@ -98,20 +110,12 @@ def lambda_handler(event, context):
 
 
 def post_to_slack(val):
-
     if isinstance(val, basestring):
         payload = {
         "text": query + "\n" + val,
         "response_type": "ephemeral"
         }
-
         r = requests.post(slack_response_url, json=payload)
-
-        if r.status_code != 200:
-            raise ValueError(
-                'In post_to_slack isinstance Slack returned status code %s, the response text is %s' % (r.status_code, r.text)
-            )
-
     else:
         payload = {
         "text": query,
@@ -120,56 +124,72 @@ def post_to_slack(val):
         }
         r = requests.post(slack_response_url, json=payload)
 
-        if r.status_code != 200:
-            raise ValueError(
-                'In post_to_slack Slack returned status code %s, the response text is %s' % (r.status_code, r.text)
-            )
 
-def send_to_slack(val, slack_channel):
-    if isinstance(val, basestring):
 
-        payload = {
-        "text": query + "\n" + val,
-        "response_type": "ephemeral"
-        }
-        r = requests.post(slack_response_url, json=payload)
+def send_to_slack(val, sendto_slack_channel):
+	#this gives easy access to incoming webhook
+	sendto_webhook = get_incoming_webhook()
 
-        if r.status_code != 200:
-            raise ValueError(
-                'In send_to_slack isinstance Slack returned status code %s, the response text is %s' % (r.status_code, r.text)
-            )
+	if isinstance(val, basestring):
+		try:
+			payload = {
+				"text": query + "\n" + val,
+				"response_type": "ephemeral"
+			}
+			r = requests.post(slack_response_url, json=payload)
+		except Exception as e:
+			print "ephemeral_message_request error "+str(e)
 
-    else:
-        #slack parses out the # and @ chars into the below char sequences,
-        # this reattaches the correct char to reform slack channel
+		try:
+			if sendto_slack_channel:
+				# creating json payload
+				payload = {
+					'text': '_' + query + '_'+ "\n" + val,
+					'as_user': False,
+					"channel": sendto_slack_channel,
+					'mrkdwn': 'true'
+				}
+				incoming_message_request = requests.post(sendto_webhook, json=payload)
+		except Exception as e:
+			print "sendto_message_request error " + str(e)
 
-        payload = {
-        "text": query,
-        "attachments": val,
-        "response_type": "ephemeral"
-        }
-        r = requests.post(slack_response_url, json=payload)
+	else:
 
-        if r.status_code != 200:
-            raise ValueError(
-                'In send_to_slack ephemeral Slack returned status code %s, the response text is %s' % (r.status_code, r.text)
-            )
+		try:
+			payload = {
+				"text": query,
+				"attachments": val,
+				"response_type": "ephemeral"
+			}
+			ephemeral_message_request = requests.post(slack_response_url, json=payload)
+		except Exception as e:
+			print "ephemeral_message_request error "+str(e)
+			if ephemeral_message_request.status_code != 200:
+				raise ValueError(
+					'In send_to_slack ephemeral Slack returned status code %s, the response text is %s' % (
+						ephemeral_message_request.status_code, ephemeral_message_request.text)
+				)
 
-        #after sending a message to your currnet channel,
-        #  then send another to the desired slack channel
+		# after sending a message to your currenet channel,
+		#  then send another to the desired slack channel
 
-        slack_sendto_url = urllib.unquote(slack_channel)
-
-        payload = {
-            "text": query,
-            "attachments": val,
-            "response_type": "in-channel"
-        }
-        g = requests.post(slack_sendto_url, json=payload)
-
-        if g.status_code != 200:
-            raise ValueError(
-                'In send_to_slack post Slack returned status code %s, the response text is %s' % (g.status_code, g.text)
-            )
+		# creating json payload
+		try:
+			if sendto_slack_channel:
+				payload = {
+					'text': '_' + query + '_',
+					'as_user': False,
+					"channel": sendto_slack_channel,
+					"attachments": val,
+					'mrkdwn': 'true'
+				}
+				incoming_message_request = requests.post(sendto_webhook, json=payload)
+		except Exception as e:
+			print "sendto_message_request error "+str(e)
+			if incoming_message_request.status_code != 200:
+				raise ValueError(
+					'In send_to_slack ephemeral Slack returned status code %s, the response text is %s' % (
+						incoming_message_request.status_code, incoming_message_request.text)
+				)
 
 

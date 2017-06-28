@@ -132,9 +132,9 @@ def send_to_slack(val, sendto_slack_channel):
 	
 	if sendto_slack_channel:
 		if "%40" in sendto_slack_channel:
-		    strings = "@"+sendto_slack_channel[len("%40"):]
+		    sendto_slack_channel = "@"+sendto_slack_channel[len("%40"):]
 		elif "%23" in sendto_slack_channel:
-		    strings = "#" + sendto_slack_channel[len("%23"):]
+		    sendto_slack_channel = "#" + sendto_slack_channel[len("%23"):]
 
 	if isinstance(val, basestring):
 		try:

@@ -456,13 +456,13 @@ def about():
 def information():
 	return """This plugin returns various information about clusters and services hosted on ECS.
 	The format of queries is as follows:
-	jarvis ecs regions
-	jarvis ecs list clusters [in <region/account>]
-	jarvis ecs list services <cluster> [in <region/account>]
-	jarvis ecs describe|desc <cluster> [in <region/account>]
-	jarvis ecs describe|desc <service> <cluster> [in <region/account>]
-	jarvis ecs list tasks[---<task_name_optional>] running <cluster> [in <region/account>]
-	jarvis ecs compare [<cluster>] into <region> <account> with [<cluster>] into <region> <account>"""
+	jarvis ecs regions [sendto <channel-id or dm address>]
+	jarvis ecs list clusters [in <region/account>] [sendto <channel-id or dm address>]
+	jarvis ecs list services <cluster> [in <region/account>] [sendto <channel-id or dm address>]
+	jarvis ecs describe|desc <cluster> [in <region/account>] [sendto <channel-id or dm address>]
+	jarvis ecs describe|desc <service> <cluster> [in <region/account>] [sendto <channel-id or dm address>]
+	jarvis ecs list tasks[---<task_name_optional>] running <cluster> [in <region/account>] [sendto <channel-id or dm address>]
+	jarvis ecs compare [<cluster>] within <region> <account> with [<cluster>] within <region> <account> [sendto <channel-id or dm address>]"""
 
 
 
@@ -638,11 +638,11 @@ def get_in_ecs_compare_data(config, args, args_eval):
 def eval_args(args,regionList):
 	args = filter(None, args)
 
-	if args.index("into") == 1:
+	if args.index("within") == 1:
 		if args[2] in regionList:
 			if len(args) == 4:
 				return len(args)
-	elif args.index("into") == 0:
+	elif args.index("within") == 0:
 		if args[1] in regionList:
 			if len(args) == 3:
 				return len(args)

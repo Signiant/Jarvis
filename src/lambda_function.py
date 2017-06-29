@@ -64,6 +64,9 @@ def lambda_handler(event, context):
     print "LOG: The request came from: " + slack_channel
     print "LOG: The request is: " + str(text)
     print "LOG: The requesting user is: " + param_map['user_name']
+    
+    #HTTP 200 "OK" call
+    post_processing_message_to_slack(" ")
 
 
     #extract send to slack channel from args

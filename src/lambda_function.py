@@ -64,10 +64,6 @@ def lambda_handler(event, context):
     print "LOG: The request came from: " + slack_channel
     print "LOG: The request is: " + str(text)
     print "LOG: The requesting user is: " + param_map['user_name']
-    
-    #HTTP 200 "OK" call
-    post_processing_message_to_slack(" ")
-
 
     #extract send to slack channel from args
     sendto_data = None
@@ -97,7 +93,7 @@ def lambda_handler(event, context):
 
             #The boto calls in the compare command cause long wait times, so this processing
             # message is sent to notify the requester
-            post_processing_message_to_slack("I'm processing your request, please stand by")
+            send_message_to_slack("I'm processing your request, please stand by")
 
             plugin = loadPlugin(text[0])
             retval = plugin.main(text)
@@ -115,6 +111,18 @@ def lambda_handler(event, context):
         send_to_slack(retval, sendto_data[0], param_map['user_name'])
     else:
         post_to_slack(retval)
+
+
+#function to send processing request message
+def send_message_to_slack(val):
+    try:
+        payload = {
+            "text": val,
+            "response_type": "ephemeral"
+        }
+        r = requests.post(slack_response_url, json=payload)
+    except Exception as e:
+        print "ephemeral_message_request error " + str(e)
 
 
 def post_to_slack(val):
@@ -154,6 +162,7 @@ def send_to_slack(val, sendto_slack_channel, sender_address):
             print "ephemeral_message_request error "+str(e)
 
         try:
+            #send to another slack channel
             if sendto_slack_channel:
                 # creating json payload
                 payload = {
@@ -163,6 +172,18 @@ def send_to_slack(val, sendto_slack_channel, sender_address):
                     'mrkdwn': 'true'
                 }
                 incoming_message_request = requests.post(sendto_webhook, json=payload)
+
+                #if the slack message was not posted then send a message to sender
+                if incoming_message_request.status_code != 200:
+                    print (
+                        'In send_to_slack ephemeral Slack returned status code %s, the response text is %s' % (
+                            incoming_message_request.status_code, incoming_message_request.text)
+                    )
+
+                    send_message_to_slack('Unable to execute sendto command, retry with a valid address')
+
+
+
         except Exception as e:
             print "sendto_message_request error " + str(e)
     else:
@@ -189,26 +210,24 @@ def send_to_slack(val, sendto_slack_channel, sender_address):
                     "attachments": val,
                     'mrkdwn': 'true'
                 }
+
                 incoming_message_request = requests.post(sendto_webhook, json=payload)
+
+                # if the slack message was not posted then send a message to sender
+                if incoming_message_request.status_code != 200:
+                    print (
+                        'In send_to_slack ephemeral Slack returned status code %s, the response text is %s' % (
+                            incoming_message_request.status_code, incoming_message_request.text)
+                    )
+
+                    send_message_to_slack('Unable to execute sendto command, retry with a valid address')
+
         except Exception as e:
             print "sendto_message_request error "+str(e)
-            if incoming_message_request.status_code != 200:
-                raise ValueError(
-                    'In send_to_slack ephemeral Slack returned status code %s, the response text is %s' % (
-                        incoming_message_request.status_code, incoming_message_request.text)
-                )
 
 
-#function to send processing request message
-def post_processing_message_to_slack(val):
-    try:
-        payload = {
-            "text": val,
-            "response_type": "ephemeral"
-        }
-        r = requests.post(slack_response_url, json=payload)
-    except Exception as e:
-        print "ephemeral_message_request error " + str(e)
+
+
 
 
 

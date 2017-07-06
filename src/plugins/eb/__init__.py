@@ -2,14 +2,18 @@ import boto3
 import json
 import re
 import math
+import logging
+import requests
 import os.path
 from datetime import *
-import common
 import sys
+import compare_output
+import common
 
 #append path of the current subdirectory module to sys.path so any modules in the current directory will load
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
+import eb_compares
 
 def main(text):
 	regionList = ['us-east-1', 'us-west-1', 'us-west-2', 'eu-west-1', 'ap-northeast-1', 'ap-southeast-2']
@@ -118,7 +122,7 @@ def main(text):
 										awsKeyId = assumedRole['Credentials']['AccessKeyId']
 										awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
 										awsSessionToken = assumedRole['Credentials']['SessionToken']
-					
+
 										session_temp = boto3.session.Session(aws_access_key_id=awsKeyId, aws_secret_access_key=awsSecretKey, aws_session_token=awsSessionToken)
 
 										r = session_temp.client('route53', region_name=region)
@@ -155,7 +159,6 @@ def main(text):
 						'value': 'Version: ' + env['VersionLabel'],
 						'short': True
 					})
-
 			attachments.append({
 					'fallback': 'Environment List',
 					'title': 'List of Environments',
@@ -163,6 +166,51 @@ def main(text):
 					'color': 'good'
 				})
 			return attachments
+
+	if 'compare' in text:
+		text.remove("compare")
+
+		if "with" in text and len(filter(None, text)) == 7:
+			master_args = filter(None, text[:text.index("with")])
+			team_args = filter(None, text[text.index("with") + 1:])
+
+			master_args_eval = eval_args(master_args, regionList)
+			team_args_eval = eval_args(team_args, regionList)
+
+			if master_args_eval and team_args_eval:
+
+				config = None
+				# load config file
+				if os.path.isfile("./aws.config"):
+					with open("aws.config") as f:
+						config = json.load(f)
+
+				if config:
+					master_data = get_in_eb_compare_data(config, master_args, master_args_eval)
+					team_data = get_in_eb_compare_data(config, team_args, team_args_eval)
+				else:
+					return "Config file was not loaded"
+
+				if master_data and team_data:
+					superjenkins_data = get_superjenkins_data(config["General"]["script_tags"]["beginning_tag"],
+															  config["General"]["script_tags"]["ending_tag"],
+															  config["General"]["build_link"],
+															  config["General"]["my_build_key"])
+
+					if superjenkins_data:
+						compared_data = eb_compares.main_eb_check_versions(master_data,
+																		   team_data,
+																		   superjenkins_data,
+																		   config["General"]["jenkins"]["branch_equivalent_tags"])
+						attachments = compare_output.slack_payload(compared_data, team_data['team_name'])
+						return attachments
+
+				else:
+					return "Values were not retrieved"
+			else:
+				return "Invalid region or account information entered"
+		else:
+			return "Missing information to complete comparison"
 
 	elif 'describe' in text or 'desc' in text:
 		text.pop(0)
@@ -415,9 +463,131 @@ def about():
 def information():
 	return """This plugin returns various information about clusters and services hosted on ECS.
 	The format of queries is as follows:
-	jarvis eb list applications|apps <in region/account> [sendto <channel-id or dm address>]
-	jarvis eb list environments|envs <application> <in region/account> [sendto <channel-id or dm address>]
-	jarvis eb describe|desc application|app <application> <in region/account> [sendto <channel-id or dm address>]
-	jarvis eb describe|desc environment|env <environment> <graph> <latency|requests> <in region/account> [sendto <channel-id or dm address>]
-	jarvis eb unpause|unp <environment> <in region/account> [sendto <channel-id or dm address>]
-	jarvis eb compare within <region> <account> with within <region> <account> [sendto <channel-id or dm address>]"""
+	jarvis eb list applications|apps <in region/account> [sendto <slack address>]
+	jarvis eb list environments|envs <application> <in region/account> [sendto <slack address>]
+	jarvis eb describe|desc application|app <application> <in region/account> [sendto <slack address>]
+	jarvis eb describe|desc environment|env <environment> <graph> <latency|requests> <in region/account> [sendto <slack address>]
+	jarvis eb unpause|unp <environment> <in region/account> [sendto <slack address>]
+	jarvis eb compare within <region> <account> with within <region> <account> [sendto <slack address>]"""
+
+
+# retrieve json data from super jenkins for build urls
+def get_superjenkins_data(beginning_script_tag, ending_script_tag, superjenkins_link=None,superjenkins_key=None):
+
+	cached_items = None
+	cached_array = None
+
+	# if call to s3 bucket to recieve superjenkins data fails than call local superjenkins_link
+	try:
+		if superjenkins_key:
+			s3 = boto3.resource('s3')
+			logging.info("Retrieving file from s3 bucket for superjenkins data")
+
+			my_bucket = superjenkins_key[:superjenkins_key.find("/")]
+			my_key = superjenkins_key[superjenkins_key.find("/")+1:]
+
+			obj = s3.Object(my_bucket, my_key)
+			json_body = obj.get()['Body'].read()
+
+			start = json_body.index(beginning_script_tag) + len(beginning_script_tag)
+			end = json_body.index(ending_script_tag, start)
+			cached_items = json.loads(json_body[start:end])
+
+			for items in cached_items:
+				cached_array = cached_items[items]
+
+			logging.info("Superjenkins data retrieved and json loaded")
+
+	except Exception, e:
+		print "Error in retrieving and creating json from s3 superjenkins_key ==> " + str(e)
+
+
+	if cached_array == None and superjenkins_link:
+		try:
+			returned_data = requests.get(superjenkins_link)
+			returned_data_iterator = returned_data.iter_lines()
+
+			for items in returned_data_iterator:
+				if beginning_script_tag in items:
+					cached_items = items.replace(beginning_script_tag, "").replace(ending_script_tag,"")
+					break
+
+			for items in json.loads(cached_items):
+				cached_array = json.loads(cached_items)[items]
+
+		except Exception, e:
+			print "Error in retrieving and creating json from superjenkins ==> " + str(e)
+
+	return cached_array
+
+
+def eval_args(args,regionList):
+
+	args = filter(None,args)
+
+	if args.index("within") == 0:
+		if args[1] in regionList and len(args) == 3:
+			return 1
+		else:
+			return 0
+	else:
+		return 0
+
+#get the dev account role for specified account_name
+def config_get_account_rolearn(account_name, config):
+	role_arn = None
+	for account in config['Accounts']:
+		if account['AccountName'] == account_name:
+			role_arn = account['RoleArn']
+			return role_arn
+	return role_arn
+
+def get_in_eb_compare_data(config, args, args_eval ):
+
+	result = dict()
+
+	#both region and account found
+	if args_eval == 1:
+		result['account'] = args[2]
+		result['region_name'] = args[1]
+
+		for account in config['Accounts']:
+			if account['AccountName'] == result['account']:
+				result['RoleArn'] = account['RoleArn']
+				temp_holder = dict()
+				for the_region in account['Applications']:
+					if the_region == result['region_name']:
+						result['environments'] = account['Applications'][the_region]
+						for envs in account['Applications'][the_region]:
+							if envs.has_key("Account"):
+								#if an alternate account is specifed for the environment than put the
+								# appropriate role_arn data for that environment
+								temp_holder[envs['ApplicationName']] = {'dns_name': envs['DNSRecord'],
+																		'zone_id': envs['HostedZoneId'],
+																		'build_master_tag': envs['build_master_tag'],
+																		'alternate_role_arn':config_get_account_rolearn(envs['Account'], config)}
+							else:
+								temp_holder[envs['ApplicationName']] = {'dns_name': envs['DNSRecord'],
+																	    'zone_id': envs['HostedZoneId'],
+																	    'build_master_tag': envs['build_master_tag']}
+							if envs.has_key('team_name'):
+								result['team_name'] = envs["team_name"]
+					result['environments'] = temp_holder
+		if result.has_key('team_name') == False:
+			temp_holder = dict()
+			for the_region in config['Applications']:
+				if the_region == result['region_name']:
+					for envs in config['Applications'][the_region]:
+						temp_holder[envs['ApplicationName']] = {'dns_name': envs['DNSRecord'],
+																'zone_id': envs['HostedZoneId'],
+																'build_master_tag': envs['build_master_tag']}
+						if envs.has_key('team_name'):
+							if envs['team_name'] == result['account']:
+								result['RoleArn'] = None
+								result['team_name'] = envs['team_name']
+				result['environments'] = temp_holder
+	#if config data was not extracted then return zero
+	if len(result) <= 2:
+		return 0
+
+	return result

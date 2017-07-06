@@ -16,7 +16,6 @@ def get_themessage(value):
         return "Branch repo"
 
 def display_results(data_array):
-
     for value in data_array:
         themessage = get_themessage(value["Match"])
         print("M_Environment = [" + value['master_env'] + "] *  M_Version = " + value['master_version'] +"master updated on "
@@ -24,7 +23,6 @@ def display_results(data_array):
               + " * Team: " +value['team']+ " T_Environment = ["+value['team_env'] + "] * T_Version " + value['team_version']
               + "master updated on "+ value["team_updateddate"].strftime('%m/%d/%Y %H:%M:%S')
               +" === "+ themessage+"\n")
-
 
 def add_indent_fields(fields):
     fields.append({
@@ -39,15 +37,15 @@ def add_indent_fields(fields):
     })
     return 1
 
+
 #format time if data available
 def format_the_time(thetime):
-
     if thetime == "":
         time_updated =""
     else:
         time_updated = "\nUpdated On: "+thetime.strftime('%m/%d/%Y %H:%M:%S')
-
     return time_updated
+
 
 #compress string is larger than 28 chars
 def shorten_input(thestring):
@@ -66,7 +64,6 @@ def append_to_field(fields, value, mastername):
             "value": value['team_version'] + format_the_time(value["team_updateddate"]),
             "short": "true"
         })
-
     fields.append({
         # adding master data
         #--trying mastername+": "+
@@ -82,16 +79,15 @@ def append_to_field(fields, value, mastername):
 
 #align the top headers for each plugin and match output
 def add_blank_space(left_header):
-    spaces_to_add = 40 - len(left_header)
+    spaces_to_add = 50 - len(left_header)
 
     if spaces_to_add >= 0:
-        blank_spaces = spaces_to_add*" "
+        blank_spaces = spaces_to_add * " "
         result = str(left_header)+blank_spaces
     else:
-        spaces_to_add = 40 - len(shorten_input(left_header))
+        spaces_to_add = 50 - len(shorten_input(left_header))
         blank_spaces = spaces_to_add * " "
         result = str(left_header) + blank_spaces
-
     return result
 
 
@@ -117,14 +113,13 @@ def create_plugin_format(thedata, thetitle_beginning):
 
     # append not matching
     if field_not_matching:
-        left_the_title = thetitle_beginning.title() + "s not matching " + master_name_edited
+        left_the_title = thetitle_beginning.title() + "s not matching  " + master_name_edited
         right_the_title = shorten_input(master_name_edited +" "+thetitle_beginning+"s ")
         the_color = "#ec1010"
 
         field_not_matching[0]['title'] = add_blank_space(left_the_title.title())+ str(field_not_matching[0]['title']).title()
         field_not_matching[1]['title'] = add_blank_space(right_the_title.title())+ str(field_not_matching[1]['title']).title()
         theattachment.append({'fields': field_not_matching, 'color': the_color})
-
 
     # append repos
     if field_repo:
@@ -151,21 +146,19 @@ def create_plugin_format(thedata, thetitle_beginning):
 
 #plugin data array is empty
 def no_elements_found(thetitle_beginning,message=None):
-
     theattachment = []
     thetitle = thetitle_beginning+message
     the_color = "#9B30FF"
     theattachment.append({'title': thetitle.title(), 'color': the_color})
     return theattachment
 
+
 #main output to slack function
 def slack_payload(data_array, eachteam):
 
     attachments = []
-
     logging.debug("printing data array in output_slack_payload")
     logging.debug(data_array)
-
     if data_array:
         for theplugin in data_array:
             if data_array[theplugin]:
@@ -174,7 +167,6 @@ def slack_payload(data_array, eachteam):
                 attachments = attachments + no_elements_found(theplugin, " not found")
     else:
         attachments = attachments + no_elements_found("Unable to Retrieve Data")
-
 
     logging.debug("printing attachments")
     logging.debug(attachments)

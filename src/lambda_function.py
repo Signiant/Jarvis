@@ -7,6 +7,7 @@ import logging
 import json
 import datetime
 
+
 pluginFolder = "./plugins"
 mainFile = "__init__"
 
@@ -139,7 +140,6 @@ def post_to_slack(val):
         "response_type": "ephemeral"
         }
         r = requests.post(slack_response_url, json=payload)
-
 
 
 def send_to_slack(val, sendto_slack_channel, sender_address):

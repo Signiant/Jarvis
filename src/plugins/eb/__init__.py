@@ -209,11 +209,11 @@ def main(text):
 						return attachments
 
 				else:
-					return "Values were not retrieved"
+					return "Values could not be retrieved from operation, 'Jarvis eb help'"
 			else:
 				return "Invalid region or account information entered"
 		else:
-			return "Missing information to complete comparison"
+			return "Invalid arguments entered to complete comparison"
 
 	elif 'describe' in text or 'desc' in text:
 		text.pop(0)

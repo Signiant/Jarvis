@@ -192,7 +192,7 @@ def main(text):
 					return "Config file was not loaded"
 
 				if master_data and team_data:
-					superjenkins_data = get_superjenkins_data(config["General"]["script_tags"]["beginning_tag"],
+					superjenkins_data = common.get_superjenkins_data(config["General"]["script_tags"]["beginning_tag"],
 															  config["General"]["script_tags"]["ending_tag"],
 															  config["General"]["build_link"],
 															  config["General"]["my_build_key"])
@@ -463,63 +463,12 @@ def about():
 def information():
 	return """This plugin returns various information about clusters and services hosted on ECS.
 	The format of queries is as follows:
-	jarvis eb list applications|apps <in region/account> [sendto <slack address>]
-	jarvis eb list environments|envs <application> <in region/account> [sendto <slack address>]
-	jarvis eb describe|desc application|app <application> <in region/account> [sendto <slack address>]
-	jarvis eb describe|desc environment|env <environment> <graph> <latency|requests> <in region/account> [sendto <slack address>]
-	jarvis eb unpause|unp <environment> <in region/account> [sendto <slack address>]
-	jarvis eb compare within <region> <account> with within <region> <account> [sendto <slack address>]"""
-
-
-# retrieve json data from super jenkins for build urls
-def get_superjenkins_data(beginning_script_tag, ending_script_tag, superjenkins_link=None,superjenkins_key=None):
-
-	cached_items = None
-	cached_array = None
-
-	# if call to s3 bucket to recieve superjenkins data fails than call local superjenkins_link
-	try:
-		if superjenkins_key:
-			s3 = boto3.resource('s3')
-			logging.info("Retrieving file from s3 bucket for superjenkins data")
-
-			my_bucket = superjenkins_key[:superjenkins_key.find("/")]
-			my_key = superjenkins_key[superjenkins_key.find("/")+1:]
-
-			obj = s3.Object(my_bucket, my_key)
-			json_body = obj.get()['Body'].read()
-
-			start = json_body.index(beginning_script_tag) + len(beginning_script_tag)
-			end = json_body.index(ending_script_tag, start)
-			cached_items = json.loads(json_body[start:end])
-
-			for items in cached_items:
-				cached_array = cached_items[items]
-
-			logging.info("Superjenkins data retrieved and json loaded")
-
-	except Exception, e:
-		print "Error in retrieving and creating json from s3 superjenkins_key ==> " + str(e)
-
-
-	if cached_array == None and superjenkins_link:
-		try:
-			returned_data = requests.get(superjenkins_link)
-			returned_data_iterator = returned_data.iter_lines()
-
-			for items in returned_data_iterator:
-				if beginning_script_tag in items:
-					cached_items = items.replace(beginning_script_tag, "").replace(ending_script_tag,"")
-					break
-
-			for items in json.loads(cached_items):
-				cached_array = json.loads(cached_items)[items]
-
-		except Exception, e:
-			print "Error in retrieving and creating json from superjenkins ==> " + str(e)
-
-	return cached_array
-
+	jarvis eb list applications|apps <in region/account> [sendto <user or channel>]
+	jarvis eb list environments|envs <application> <in region/account> [sendto <user or channel>]
+	jarvis eb describe|desc application|app <application> <in region/account> [sendto <user or channel>]
+	jarvis eb describe|desc environment|env <environment> <graph> <latency|requests> <in region/account> [sendto <user or channel>]
+	jarvis eb unpause|unp <environment> <in region/account> [sendto <user or channel>]
+	jarvis eb compare within <region> <account> with within <region> <account> [sendto <user or channel>]"""
 
 def eval_args(args,regionList):
 

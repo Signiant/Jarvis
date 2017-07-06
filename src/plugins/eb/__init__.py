@@ -171,7 +171,6 @@ def main(text):
 
 	if 'compare' in text:
 		text.remove("compare")
-		print "in eb compare and number of arguments is "+str(len(filter(None, text)))
 
 		if "with" in text and len(filter(None, text)) == 7:
 			master_args = filter(None, text[:text.index("with")])
@@ -206,7 +205,7 @@ def main(text):
 																		   superjenkins_data,
 																		   config["General"]["jenkins"]["branch_equivalent_tags"])
 						attachments = compare_output.slack_payload(compared_data, team_data['team_name'])
-						pprint.pprint(attachments)
+			
 						return attachments
 
 				else:

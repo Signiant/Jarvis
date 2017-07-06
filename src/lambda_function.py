@@ -7,6 +7,7 @@ import logging
 import json
 import datetime
 
+
 pluginFolder = "./plugins"
 mainFile = "__init__"
 
@@ -141,7 +142,6 @@ def post_to_slack(val):
         r = requests.post(slack_response_url, json=payload)
 
 
-
 def send_to_slack(val, sendto_slack_channel, sender_address):
     # this gives easy access to incoming webhook
     sendto_webhook = get_incoming_webhook()
@@ -180,7 +180,7 @@ def send_to_slack(val, sendto_slack_channel, sender_address):
                             incoming_message_request.status_code, incoming_message_request.text)
                     )
 
-                    send_message_to_slack('Unable to execute sendto command, retry with a valid address')
+                    send_message_to_slack('Unable to execute sendto command, retry with a valid  user or channel')
 
 
 
@@ -220,7 +220,8 @@ def send_to_slack(val, sendto_slack_channel, sender_address):
                             incoming_message_request.status_code, incoming_message_request.text)
                     )
 
-                    send_message_to_slack('Unable to execute sendto command, retry with a valid address')
+                    send_message_to_slack('Unable to execute sendto command, retry with a valid user or channel')
+
 
         except Exception as e:
             print "sendto_message_request error "+str(e)

@@ -194,7 +194,6 @@ def main(text):
 			if master_args_eval and team_args_eval:
 
 				config = None
-
 				#load config file
 				if os.path.isfile("./aws.config"):
 					with open("aws.config") as f:
@@ -209,7 +208,7 @@ def main(text):
 				if master_data and team_data:
 
 					# retrieves the json from superjenkins with all build link data
-					superjenkins_data = get_superjenkins_data(config["General"]["script_tags"]["beginning_tag"],
+					superjenkins_data = common.get_superjenkins_data(config["General"]["script_tags"]["beginning_tag"],
 															  config["General"]["script_tags"]["ending_tag"],
 															  config["General"]["build_link"],
 															  config["General"]["my_build_key"])
@@ -231,7 +230,7 @@ def main(text):
 				return "Invalid region or account information entered"
 
 		else:
-			return "Missing information to complete comparison. "
+			return "Missing information to complete comparison"
 
 	elif 'describe' in text or 'desc' in text:
 		cw = session.client('cloudwatch', region_name=region)
@@ -456,13 +455,13 @@ def about():
 def information():
 	return """This plugin returns various information about clusters and services hosted on ECS.
 	The format of queries is as follows:
-	jarvis ecs regions [sendto <channel-id or dm address>]
-	jarvis ecs list clusters [in <region/account>] [sendto <channel-id or dm address>]
-	jarvis ecs list services <cluster> [in <region/account>] [sendto <channel-id or dm address>]
-	jarvis ecs describe|desc <cluster> [in <region/account>] [sendto <channel-id or dm address>]
-	jarvis ecs describe|desc <service> <cluster> [in <region/account>] [sendto <channel-id or dm address>]
-	jarvis ecs list tasks[---<task_name_optional>] running <cluster> [in <region/account>] [sendto <channel-id or dm address>]
-	jarvis ecs compare [<cluster>] within <region> <account> with [<cluster>] within <region> <account> [sendto <channel-id or dm address>]"""
+	jarvis ecs regions [sendto <user or channel>]
+	jarvis ecs list clusters [in <region/account>] [sendto <user or channel>]
+	jarvis ecs list services <cluster> [in <region/account>] [sendto <user or channel>]
+	jarvis ecs describe|desc <cluster> [in <region/account>] [sendto <user or channel>]
+	jarvis ecs describe|desc <service> <cluster> [in <region/account>] [sendto <user or channel>]
+	jarvis ecs list tasks[---<task_name_optional>] running <cluster> [in <region/account>] [sendto <user or channel>]
+	jarvis ecs compare [<cluster>] within <region> <account> with [<cluster>] within <region> <account> [sendto <user or channel>]"""
 
 
 
@@ -539,55 +538,6 @@ def tasks_get_lookup_term(text):
                 return None
             else:
                 return data[(data.lower().find('---') + 3):]
-
-# retrieve json data from super jenkins for build urls
-def get_superjenkins_data(beginning_script_tag, ending_script_tag, superjenkins_link=None,superjenkins_key=None):
-
-	cached_items = None
-	cached_array = None
-
-	# if call to s3 bucket to recieve superjenkins data fails than call local superjenkins_link
-	try:
-		s3 = boto3.resource('s3')
-		logging.info("Retrieving file from s3 bucket for superjenkins data")
-
-		my_bucket = superjenkins_key[:superjenkins_key.find("/")]
-		my_key = superjenkins_key[superjenkins_key.find("/")+1:]
-
-		obj = s3.Object(my_bucket, my_key)
-		json_body = obj.get()['Body'].read()
-
-		start = json_body.index(beginning_script_tag) + len(beginning_script_tag)
-		end = json_body.index(ending_script_tag, start)
-		cached_items = json.loads(json_body[start:end])
-
-		for items in cached_items:
-			cached_array = cached_items[items]
-
-		logging.info("Superjenkins data retrieved and json loaded")
-
-	except Exception, e:
-		print "Error in retrieving and creating json from s3 superjenkins_key ==> " + str(e)
-
-
-	if cached_array == None:
-		try:
-			returned_data = requests.get(superjenkins_link)
-			returned_data_iterator = returned_data.iter_lines()
-
-			for items in returned_data_iterator:
-				if beginning_script_tag in items:
-					cached_items = items.replace(beginning_script_tag, "").replace(ending_script_tag,"")
-					break
-
-			for items in json.loads(cached_items):
-				cached_array = json.loads(cached_items)[items]
-
-		except Exception, e:
-			print "Error in retrieving and creating json from superjenkins ==> " + str(e)
-
-	return cached_array
-
 
 #retrieve data from config files for compare
 def get_in_ecs_compare_data(config, args, args_eval):

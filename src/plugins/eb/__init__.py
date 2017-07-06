@@ -7,8 +7,10 @@ import requests
 import os.path
 from datetime import *
 import sys
+import pprint
 import compare_output
 import common
+
 
 #append path of the current subdirectory module to sys.path so any modules in the current directory will load
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -204,6 +206,7 @@ def main(text):
 																		   superjenkins_data,
 																		   config["General"]["jenkins"]["branch_equivalent_tags"])
 						attachments = compare_output.slack_payload(compared_data, team_data['team_name'])
+						pprint.pprint(attachments)
 						return attachments
 
 				else:

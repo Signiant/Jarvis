@@ -225,8 +225,6 @@ def send_to_slack(val, sendto_slack_channel, sender_address):
 
                     send_message_to_slack('Unable to execute sendto command, retry with a valid user or channel')
 
-
-
         except Exception as e:
             print "sendto_message_request error "+str(e)
 

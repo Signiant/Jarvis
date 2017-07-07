@@ -226,7 +226,7 @@ def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
     eb_data = []
     
     # array of envs not in team
-    not_in_team_array = m_array
+    not_in_team_array = tkey
 
     for m_data in m_array:
         for t_array in tkey:
@@ -245,7 +245,7 @@ def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
             if team_version_prefix == master_version_prefix:
                 
                 #remove matched applications from not_in_team_array
-                not_in_team_array.remove(m_data)
+                not_in_team_array.remove(t_array)
 
                 amatch = compare_environment(team_version_ending, master_version_ending, jenkins_build_tags)
 

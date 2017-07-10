@@ -113,7 +113,6 @@ def finalize_service_name(service_name, service_def, environment_code_name):
         if environment_code_name in def_name_list:
             def_name_list.remove(environment_code_name)
             result.append(service_name)
-
     return result
 
 
@@ -185,8 +184,9 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
 
     # this array will contain all services not found in team array not holding master data
     not_in_team_array = []
-    for things in m_array:
-        not_in_team_array.append(things)
+    for m_items in m_array:
+        for m_things in m_array[m_items]:
+            not_in_team_array.append(m_things)
 
     for eachmaster in m_array:
         for m_data in m_array[eachmaster]:
@@ -215,16 +215,16 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
 
                         if the_team_service_name and the_master_service_name:
                             logging.debug(the_team_service_name[0] + " == " + the_master_service_name[0] + "\n\n")
+
                             if the_team_service_name[0] == the_master_service_name[0]:
-                                not_in_team_array.remove(m_data)
+                                if m_data in not_in_team_array:
+                                    not_in_team_array.remove(m_data)
                                 amatch = compare_environment(t_array['version'], m_data['version'], jenkins_build_tags)
                                 logging.debug(t_array['version'] + " === " + m_data['version'] + "\n")
 
                                 # if the match is of type 2 where environment/service is not matching prod master
                                 #   and not a dev branch get the build
-
                                 if amatch == 2:
-
                                     if len(the_master_service_name) == 2:
                                         ecs_master_version_entry = get_build_url(cached_array,
                                                                                  the_master_service_name[1],
@@ -298,6 +298,14 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
                                      "regionname": "",
                                      "pluginname": "ecs"})
 
+
+    #remove duplicates in ecs_data list
+    ecs_data_temp = []
+    for ecs_service in ecs_data:
+        if ecs_service not in ecs_data_temp:
+            ecs_data_temp.append(ecs_service)
+    ecs_data = ecs_data_temp
+
     compared_array.update({'ecs service': ecs_data})
     return compared_array
 
@@ -305,7 +313,6 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
 # main ecs plugin function
 def main_ecs_check_versions(master_array, team_array, jenkins_build_tags, superjenkins_data, team_exclusion_list):
     masterdata = dict()
-    teamdata = dict()
 
     master_plugin_data = ecs_check_versions(master_array['account'], master_array['region_name'],
                                             master_array['cluster_name'], "",

@@ -220,15 +220,12 @@ def main(text):
 															team_data['service_exclude_list'])
 
 					attachments = compare_output.slack_payload(compared_data, team_data['team_name'])
-
 					return attachments
 
 				else:
 					return "Values were not retrieved"
-
 			else:
 				return "Invalid region or account information entered"
-
 		else:
 			return "Missing information to complete comparison"
 

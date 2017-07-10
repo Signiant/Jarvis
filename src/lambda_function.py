@@ -186,6 +186,7 @@ def send_to_slack(val, sendto_slack_channel, sender_address):
 
 
 
+
         except Exception as e:
             print "sendto_message_request error " + str(e)
     else:
@@ -221,6 +222,7 @@ def send_to_slack(val, sendto_slack_channel, sender_address):
                         'In send_to_slack ephemeral Slack returned status code %s, the response text is %s' % (
                             incoming_message_request.status_code, incoming_message_request.text)
                     )
+
 
                     send_message_to_slack('Unable to execute sendto command, retry with a valid user or channel')
 

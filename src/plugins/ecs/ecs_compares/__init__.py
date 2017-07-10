@@ -112,11 +112,7 @@ def finalize_service_name(service_name, service_def, environment_code_name):
     if environment_code_name:
         if environment_code_name in def_name_list:
             def_name_list.remove(environment_code_name)
-            if len(def_name_list) > 2:
-                result.append(def_name_list[0] + "_" + service_name)
-                result.append(service_name)
-            else:
-                result.append(service_name)
+            result.append(service_name)
 
     return result
 
@@ -187,6 +183,11 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
     compared_array = {}
     ecs_data = []
 
+    # this array will contain all services not found in team array not holding master data
+    not_in_team_array = []
+    for things in m_array:
+        not_in_team_array.append(things)
+
     for eachmaster in m_array:
         for m_data in m_array[eachmaster]:
 
@@ -215,7 +216,7 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
                         if the_team_service_name and the_master_service_name:
                             logging.debug(the_team_service_name[0] + " == " + the_master_service_name[0] + "\n\n")
                             if the_team_service_name[0] == the_master_service_name[0]:
-
+                                not_in_team_array.remove(m_data)
                                 amatch = compare_environment(t_array['version'], m_data['version'], jenkins_build_tags)
                                 logging.debug(t_array['version'] + " === " + m_data['version'] + "\n")
 
@@ -256,6 +257,46 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
                                                  "slackchannel": t_array['slackchannel'],
                                                  "pluginname": "ecs"
                                                  })
+
+    # add all master services not found to ecs data output
+    if not_in_team_array:
+        for m_data in not_in_team_array:
+
+            # check if service_name is on excluded services list
+            do_not_exclude_service = True
+            for ex_service in excluded_services:
+                if ex_service in t_array['servicename']:
+                    do_not_exclude_service = False
+
+            if do_not_exclude_service:
+                the_master_service_name = finalize_service_name(m_data['servicename'],
+                                                                m_data['service_definition'],
+                                                                m_data['environment_code_name'])
+
+                if the_master_service_name:
+                    # if the match is of type 2 where environment/service is not matching prod master
+                    #   and not a dev branch get the build
+
+                    if len(the_master_service_name) == 2:
+                        ecs_master_version_entry = get_build_url(cached_array,
+                                                                 the_master_service_name[1],
+                                                                 m_data['version'],
+                                                                 jenkins_build_tags)
+                    elif len(the_master_service_name) == 1:
+                        ecs_master_version_entry = get_build_url(cached_array,
+                                                                 the_master_service_name[0],
+                                                                 m_data['version'],
+                                                                 jenkins_build_tags)
+
+                    ecs_data.append({"master_env": the_master_service_name[0],
+                                     "master_version": ecs_master_version_entry,
+                                     "master_updateddate": "",
+                                     "team_env": "Service Not Found",
+                                     "team_version": "",
+                                     "team_updateddate": "",
+                                     "Match": 2, "mastername": m_data['environment_code_name'],
+                                     "regionname": "",
+                                     "pluginname": "ecs"})
 
     compared_array.update({'ecs service': ecs_data})
     return compared_array

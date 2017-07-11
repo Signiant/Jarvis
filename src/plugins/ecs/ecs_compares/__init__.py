@@ -176,6 +176,13 @@ def get_build_url(cached_array, lookup_word, prelim_version, jenkins_tags):
 
     return final_url
 
+# strip all non alphanumeric chars and compare strings
+def comp_strings_charnum(string1, string2):
+    comp_string1 = re.sub('[^0-9a-zA-Z]+', '', string1)
+    comp_string2 = re.sub('[^0-9a-zA-Z]+', '', string2)
+    result = comp_string1 == comp_string2
+    return result
+
 
 # compare master to teams
 def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, excluded_services=None):
@@ -265,7 +272,7 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
             # check if service_name is on excluded services list
             do_not_exclude_service = True
             for ex_service in excluded_services:
-                if ex_service in m_data:
+                if comp_strings_charnum(ex_service,m_data):
                     do_not_exclude_service = False
 
             if do_not_exclude_service:

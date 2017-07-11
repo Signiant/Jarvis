@@ -284,7 +284,7 @@ def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
             eb_data.append({"master_env": m_data['environmentname'],
                             "master_version": master_version_entry,
                             "master_updateddate": m_data['dateupdated'],
-                            "team_env": "Application Not Found",
+                            "team_env": "Environment Not Found",
                             "team_version": "",
                             "team_updateddate": "",
                             "Match": 2, "mastername": m_data['team_name'],

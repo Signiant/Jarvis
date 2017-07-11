@@ -1,5 +1,6 @@
 import boto3
 import logging
+import re
 
 # get ecs data from boto call
 def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, env_code_name, role_arn):

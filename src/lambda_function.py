@@ -49,7 +49,6 @@ def _formparams_to_dict(s1):
     return retval
 
 def lambda_handler(event, context):
-    print str(event)
     # Lambda entry point
     param_map = _formparams_to_dict(event['formparams'])
     text = param_map['text'].split('+')

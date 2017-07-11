@@ -273,7 +273,7 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
             # check if service_name is on excluded services list
             do_not_exclude_service = True
             for ex_service in excluded_services:
-                if ex_service in m_data:
+                if comp_strings_charnum(ex_service, m_data['servicename']):
                     do_not_exclude_service = False
 
             if do_not_exclude_service:

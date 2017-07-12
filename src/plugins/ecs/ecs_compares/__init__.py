@@ -1,7 +1,6 @@
 import boto3
 import logging
 import re
-import pprint
 
 # get ecs data from boto call
 def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, env_code_name, role_arn):
@@ -211,7 +210,6 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
                     for ex_service in excluded_services:
                         if comp_strings_charnum(ex_service, t_array['servicename']):
                             do_not_exclude_service = False
-                            break
 
                     if do_not_exclude_service:
 
@@ -277,7 +275,6 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
             for ex_service in excluded_services:
                 if comp_strings_charnum(ex_service, m_data['servicename']):
                     do_not_exclude_service = False
-                    break
 
             if do_not_exclude_service:
                 the_master_service_name = finalize_service_name(m_data['servicename'],

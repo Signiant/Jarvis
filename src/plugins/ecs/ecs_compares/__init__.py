@@ -209,8 +209,9 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
                     # check if service_name is on excluded services list
                     do_not_exclude_service = True
                     for ex_service in excluded_services:
-                        if ex_service in t_array['servicename']:
+                        if comp_strings_charnum(ex_service, t_array['servicename']):
                             do_not_exclude_service = False
+                            break
 
                     if do_not_exclude_service:
 
@@ -227,9 +228,6 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
 
                             if the_team_service_name[0] == the_master_service_name[0]:
                                 if m_data in not_in_team_array:
-                                    print "***********"
-                                    pprint.pprint(m_data)
-                                    print "***********"
                                     not_in_team_array.remove(m_data)
                                 amatch = compare_environment(t_array['version'], m_data['version'], jenkins_build_tags)
                                 logging.debug(t_array['version'] + " === " + m_data['version'] + "\n")
@@ -277,10 +275,9 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
             # check if service_name is on excluded services list
             do_not_exclude_service = True
             for ex_service in excluded_services:
-                pprint.pprint(ex_service)
-                pprint.pprint(m_data)
                 if comp_strings_charnum(ex_service, m_data['servicename']):
                     do_not_exclude_service = False
+                    break
 
             if do_not_exclude_service:
                 the_master_service_name = finalize_service_name(m_data['servicename'],

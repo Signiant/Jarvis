@@ -50,9 +50,8 @@ def _formparams_to_dict(s1):
     return retval
 
 def lambda_handler(event, context):
-    event = event['Records'][0]['Sns']['Message']
     # Lambda entry point
-    param_map = _formparams_to_dict(event['formparams'])
+    param_map = _formparams_to_dict(event['Records'][0]['Sns']['Message']['formparams'])
     text = param_map['text'].split('+')
     global query
     query = urllib.unquote(" ".join(text))

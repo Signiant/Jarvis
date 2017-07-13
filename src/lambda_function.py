@@ -53,7 +53,7 @@ def _formparams_to_dict(s1):
 def lambda_handler(event, context):
     if 'Records' in event:
         alert = event['Records'][0]['Sns']['Message']
-        event = json.loads(alert)
+        event['formparams'] = str(alert[len("{'formparams': '"):-2])
     # Lambda entry point
     param_map = _formparams_to_dict(event['formparams'])
     text = param_map['text'].split('+')

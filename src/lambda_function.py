@@ -51,7 +51,8 @@ def _formparams_to_dict(s1):
     return retval
 
 def lambda_handler(event, context):
-    sub_event = json.loads(['Records'][0]['Sns']['Message'])
+    print type(event)
+    print type(['Records'][0]['Sns']['Message'])
     # Lambda entry point
     param_map = _formparams_to_dict(event['formparams'])
     text = param_map['text'].split('+')

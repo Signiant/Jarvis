@@ -76,6 +76,8 @@ def lambda_handler(event, context):
     if "sendto" in text:
         sendto_data = filter(None, text[text.index("sendto") + 1:])
         text = text[:text.index("sendto")]
+    
+    print "inc_tk" + str(incoming_token)
 
     if param_map['token'] != incoming_token:  # Check for a valid Slack token
         retval = 'invalid incoming Slack token'

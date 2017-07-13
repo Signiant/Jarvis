@@ -44,8 +44,8 @@ def get_superjenkins_data(beginning_script_tag, ending_script_tag, superjenkins_
 	cached_array = None
 
 	# if call to s3 bucket to recieve superjenkins data fails than call local superjenkins_link
-	try:
-		if superjenkins_key:
+	if superjenkins_key:
+		try:
 			s3 = boto3.resource('s3')
 			logging.info("Retrieving file from s3 bucket for superjenkins data")
 
@@ -64,8 +64,8 @@ def get_superjenkins_data(beginning_script_tag, ending_script_tag, superjenkins_
 
 			logging.info("Superjenkins data retrieved and json loaded")
 
-	except Exception, e:
-		print "Error in retrieving and creating json from s3 superjenkins_key ==> " + str(e)
+		except Exception, e:
+			print "Error in retrieving and creating json from s3 superjenkins_key ==> " + str(e)
 
 
 	if cached_array == None and superjenkins_link:

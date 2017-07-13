@@ -51,7 +51,7 @@ def _formparams_to_dict(s1):
     return retval
 
 def lambda_handler(event, context):
-    if event.haskey('Records'):
+    if 'Records' in event:
         alert = event['Records'][0]['Sns']['Message']
         event = json.loads(alert)
     # Lambda entry point

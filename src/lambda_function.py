@@ -51,10 +51,13 @@ def _formparams_to_dict(s1):
     return retval
 
 def lambda_handler(event, context):
+    pprint.pprint(event)
+    
     if 'Records' in event:
         alert = event['Records'][0]['Sns']['Message']
         event['formparams'] = str(alert[len("{'formparams': '"):-2])
     # Lambda entry point
+    pprint.pprint(event)
     param_map = _formparams_to_dict(event['formparams'])
     text = param_map['text'].split('+')
     global query

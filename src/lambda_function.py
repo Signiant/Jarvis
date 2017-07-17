@@ -96,11 +96,6 @@ def lambda_handler(event, context):
             retval = 'You can use the following commands: ' + plugins + '.'
     else:
         try:
-
-            #The boto calls in the compare command cause long wait times, so this processing
-            # message is sent to notify the requester
-            send_message_to_slack("I'm processing your request, please stand by")
-
             plugin = loadPlugin(text[0])
             retval = plugin.main(text)
         except Exception as e:

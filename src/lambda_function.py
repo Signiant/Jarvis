@@ -56,7 +56,6 @@ def lambda_handler(event, context):
         event['formparams'] = str(alert[len("{'formparams': '"):-2])
     # Lambda entry point
     param_map = _formparams_to_dict(event['formparams'])
-    pprint.pprint(param_map)
     text = param_map['text'].split('+')
     global query
     query = urllib.unquote(" ".join(text))

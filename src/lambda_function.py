@@ -6,6 +6,8 @@ import urllib
 import logging
 import json
 import datetime
+import pprint
+import json
 
 
 pluginFolder = "./plugins"
@@ -49,6 +51,9 @@ def _formparams_to_dict(s1):
     return retval
 
 def lambda_handler(event, context):
+    if 'Records' in event:
+        alert = event['Records'][0]['Sns']['Message']
+        event['formparams'] = str(alert[len("{'formparams': '"):-2])
     # Lambda entry point
     param_map = _formparams_to_dict(event['formparams'])
     text = param_map['text'].split('+')
@@ -72,7 +77,7 @@ def lambda_handler(event, context):
         sendto_data = filter(None, text[text.index("sendto") + 1:])
         text = text[:text.index("sendto")]
 
-    if param_map['token'] != incoming_token:  # Check for a valid Slack token
+    if param_map["u'token"] != incoming_token:  # Check for a valid Slack token
         retval = 'invalid incoming Slack token'
 
     elif text[0] == 'help':
@@ -91,11 +96,6 @@ def lambda_handler(event, context):
             retval = 'You can use the following commands: ' + plugins + '.'
     else:
         try:
-
-            #The boto calls in the compare command cause long wait times, so this processing
-            # message is sent to notify the requester
-            send_message_to_slack("I'm processing your request, please stand by")
-
             plugin = loadPlugin(text[0])
             retval = plugin.main(text)
         except Exception as e:

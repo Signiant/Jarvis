@@ -569,5 +569,4 @@ def get_in_eb_compare_data(config, args, args_eval):
 		# if config data was not extracted then return zero
 		if len(result) <= 2:
 			return 0
-		pprint.pprint(result)
 		return result

@@ -222,7 +222,6 @@ def get_build_url(cached_array, lookup_word, prelim_version, j_tags, match_num, 
 def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
 
     compared_array = dict()
-
     eb_data = []
 
     # this array will contain all applications not found in team array not holding master data

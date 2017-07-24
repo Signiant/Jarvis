@@ -20,20 +20,17 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
 
     for cluster in cluster_list:
         try:
-
             sts_client = boto3.client('sts')
             if role_arn:
                 assumedRole = sts_client.assume_role(RoleArn=role_arn, RoleSessionName="AssumedRole")
                 awsKeyId = assumedRole['Credentials']['AccessKeyId']
                 awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
                 awsSessionToken = assumedRole['Credentials']['SessionToken']
-
             session = boto3.session.Session(aws_access_key_id=awsKeyId, aws_secret_access_key=awsSecretKey, aws_session_token=awsSessionToken)
             client = session.client("ecs", region_name=region_name)
             if client:
                 service_paginator = client.get_paginator('list_services')
                 service_iterator = service_paginator.paginate(cluster=cluster)
-
         except Exception, e:
             print("Error obtaining list of ECS services for " + cluster + " (" + str(e) + ")")
         except KeyError, e:
@@ -59,12 +56,12 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
 
                     # version_parsed, team_service_name, region_name
                     if len(version_output) > 1:
-                        c_service = {"version": service_version_ending,
-                                     "servicename": service_version_prefix,
-                                     "service_definition": team_service_definition,
-                                     "regionname": region_name,
-                                     "slackchannel": slack_channel,
-                                     "environment_code_name": env_code_name}
+                        c_service = {"version": service_version_ending.encode("utf-8"),
+                                     "servicename": service_version_prefix.encode("utf-8"),
+                                     "service_definition": team_service_definition.encode("utf-8"),
+                                     "regionname": region_name.encode("utf-8"),
+                                     "slackchannel": slack_channel.encode("utf-8"),
+                                     "environment_code_name": env_code_name.encode("utf-8")}
                         service_versions.append(c_service)
 
         except Exception, e:
@@ -75,15 +72,14 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
 
 # compare the versions
 def compare_environment(team_env, master_env, jenkin_build_terms):
+
     """""
     Return types
     1 - Matches Master
     2 - Does not match master
     3 - branch
     """""
-
     result = 0
-
     if jenkin_build_terms[0] in master_env or jenkin_build_terms[1] in master_env:
         if team_env == master_env:
             result = 1
@@ -128,7 +124,6 @@ def build_compare_words(lookup, compareto, jenkin_build_terms):
         compareto = compareto.lower().split("_")
     else:
         compareto = []
-
     if lookup:
         if "-" in lookup:
             lookup = lookup.replace("-", "_")
@@ -137,7 +132,6 @@ def build_compare_words(lookup, compareto, jenkin_build_terms):
         lookup = lookup.lower().split("_")
     else:
         lookup = []
-
     # aggregate unique values in the two lists
     res = list(set(compareto) ^ set(lookup))
 
@@ -145,23 +139,18 @@ def build_compare_words(lookup, compareto, jenkin_build_terms):
         result = True
     elif len(res) == 1 and (jenkin_build_terms[0] in res or jenkin_build_terms[1] in res):
         result = True
-
     return result
 
 
 def get_build_url(cached_array, lookup_word, prelim_version, jenkins_tags):
     the_url = None
-
     # compare the service name to links in the superjenkins_data
     # set the build_url when a url contains words matching the lookup service name
     for the_names in cached_array:
         if build_compare_words(lookup_word, the_names['name'], jenkins_tags):
             the_url = the_names['url']
-
     symbols_array = [".", "_", "-"]
-
     build_num = []
-
     # extract the build number from version
     for symb in symbols_array:
         if symb in prelim_version:
@@ -176,6 +165,8 @@ def get_build_url(cached_array, lookup_word, prelim_version, jenkins_tags):
         final_url = "ver: " + str(prelim_version)
 
     return final_url
+
+
 
 # strip all non alphanumeric chars and compare strings
 def comp_strings_charnum(string1, string2):
@@ -316,6 +307,7 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
 
     compared_array.update({'ecs service': ecs_data})
     return compared_array
+
 
 
 # main ecs plugin function

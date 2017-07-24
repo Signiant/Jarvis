@@ -7,7 +7,6 @@ import requests
 import os.path
 from datetime import *
 import sys
-import pprint
 import compare_output
 import common
 
@@ -569,4 +568,5 @@ def get_in_eb_compare_data(config, args, args_eval):
 		# if config data was not extracted then return zero
 		if len(result) <= 2:
 			return 0
+
 		return result

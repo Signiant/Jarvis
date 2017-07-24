@@ -91,6 +91,7 @@ def main(text):
 			fields = []
 			attachments = []
 
+
 			if not text:
 				return "I need a cluster name to complete the requested operation. To view the cluster names, use 'jarvis ecs list clusters <region>'"
 
@@ -100,12 +101,10 @@ def main(text):
 				try:
 					resulting_array = get_task_list(cluster=text[0], ecs=ecs)
 					query_result = ecs.describe_tasks(cluster=text[0], tasks=resulting_array)
-
 					instance_task_families = parse_tasks(query_result['tasks'], tasks_lookup_term, ecs)
 
 					if not instance_task_families:
 						return "No tasks where found matching the lookup term for tasks. To look up a particular task, use 'jarvis ecs list tasks---<optional term> running <cluster> [in <region/account>]' "
-
 
 					for tasks in instance_task_families:
 						fields.append({
@@ -480,22 +479,38 @@ def get_task_list(next_token=None, cluster=None, ecs=None):
                     running_tasks.extend(query_result['taskArns'])
     return running_tasks
 
+def parse_tasks(task_list, lookup_term, plugin):
+	''' Parse task_list and return a dict containing family:count'''
+	task_families = {}
+	for task in task_list:
+		family = task['taskDefinitionArn'].split("/")[-1]
+		try:
+			image = plugin.describe_task_definition(taskDefinition=family)
+		except Exception as e:
+			print "Error could not retrieve image "+str(e)
+			image = []
+		if image:
+			version_name = image['taskDefinition']['containerDefinitions'][0]['image'].split('/')[-1].split(':')[-1]
+			if tasks_add_not_blank(family, lookup_term):
+				if family not in task_families:
+					task_families[family] = {}
+					task_families[family]['count'] = 1
+					task_families[family]['version'] = version_name
+				else:
+					task_families[family]['count'] = task_families[family]['count'] + 1
 
-
+	return task_families
+"""
 def parse_tasks(task_list, lookup_term, plugin):
     ''' Parse task_list and return a dict containing family:count'''
     task_families = {}
     for task in task_list:
-
         # Get the task type (service or family)
         type = task['group'].split(':')[0]
         # Get the task family for this task
         family = task['group'].split(':')[-1]
-
-
         image = plugin.describe_task_definition(taskDefinition=family)
         version_name = image['taskDefinition']['containerDefinitions'][0]['image'].split('/')[-1].split(':')[-1]
-
         if tasks_add_not_blank(family, lookup_term):
             if type == "family":
                 if family not in task_families:
@@ -504,17 +519,15 @@ def parse_tasks(task_list, lookup_term, plugin):
                     task_families[family]['version'] = version_name
                 else:
                     task_families[family]['count'] = task_families[family]['count'] + 1
-
     return task_families
+"""
 
 
 def tasks_add_not_blank(theword, lookup_word):
-
     if not lookup_word:
         return True
     else:
         if theword.lower().find(str(lookup_word.lower())) > -1:
-
             return True
         else:
             return False
@@ -536,11 +549,10 @@ def tasks_get_lookup_term(text):
             else:
                 return data[(data.lower().find('---') + 3):]
 
+
 #retrieve data from config files for compare
 def get_in_ecs_compare_data(config, args, args_eval):
-
 	result = dict()
-
 	#Depending on the arguments provided the values for cluster, region and account are determined as follows...
 	#	if the args_eval did not recieve a cluster from user than args_eval == 3
 	#	if the args_eval did recieve a cluster from user than args_eval == 4

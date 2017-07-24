@@ -488,6 +488,7 @@ def get_task_list(next_token=None, cluster=None, ecs=None):
                     running_tasks.extend(query_result['taskArns'])
     return running_tasks
 
+  
 def parse_tasks(task_list, lookup_term, plugin):
 	''' Parse task_list and return a dict containing family:count'''
 	task_families = {}
@@ -509,7 +510,6 @@ def parse_tasks(task_list, lookup_term, plugin):
 					task_families[family]['count'] = task_families[family]['count'] + 1
 
 	return task_families
-
 
 
 def tasks_add_not_blank(theword, lookup_word):
@@ -539,11 +539,13 @@ def tasks_get_lookup_term(text):
                 return data[(data.lower().find('---') + 3):]
 
 
+
 # retrieve data from config files for compare
 def get_in_ecs_compare_data(config, args, args_eval):
 	result = dict()
 
 	# Depending on the arguments provided the values for cluster, region and account are determined as follows...
+
 	#	if the args_eval did not recieve a cluster from user than args_eval == 3
 	#	if the args_eval did recieve a cluster from user than args_eval == 4
 	if args_eval == 3:

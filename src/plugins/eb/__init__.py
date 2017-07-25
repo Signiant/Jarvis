@@ -39,8 +39,9 @@ def main(text):
 			config = json.load(f)
 		if config.get('eb'):
 			for account in config['eb']['Accounts']:
-				if "AccountName" not in account and "RoleArn" not in account:
-					loadedApplications = account
+				if account["AccountName"] == "" and account["RoleArn"] == "":
+					loadedApplications = account['Applications']
+					break
 
 	if 'in' in text:
 		while text[-1] != 'in':

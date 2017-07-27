@@ -33,16 +33,6 @@ def main(text):
 	tokens = []
 
 
-	config = None
-	if os.path.isfile("./aws.config"):
-		with open("aws.config") as f:
-			config = json.load(f)
-		if config.get('eb'):
-			for account in config['eb']['Accounts']:
-				if account["AccountName"] == "" and account["RoleArn"] == "":
-					loadedApplications = account['Applications']
-					break
-
 	if 'in' in text:
 		while text[-1] != 'in':
 			tokens.append(text.pop())
@@ -51,6 +41,23 @@ def main(text):
 			region = extractedRegion.group()
 			tokens.remove(region)
 		text.remove('in')
+
+
+	config = None
+	if os.path.isfile("./aws.config"):
+		with open("aws.config") as f:
+			config = json.load(f)
+		if config.get('eb'):
+			for account in config['eb']['Accounts']:
+				if account["RoleArn"] == "":
+					if account['AccountName'] in tokens:
+						tokens.remove(account['AccountName'])
+						loadedApplications = account['Applications']
+						break
+					elif len(tokens) == 0:
+						loadedApplications = account['Applications']
+						break
+
 
 	if len(tokens) > 0 and config != None:
 		for account in config['eb']['Accounts']:
@@ -163,11 +170,19 @@ def main(text):
 						status = ":warning:"
 					elif env['Status'] == "Terminated":
 						status = ":x:"
-				fields.append({
-					'title': status + " " + env['EnvironmentName'] + " " + live,
-					'value': 'Version: ' + env['VersionLabel'],
-					'short': True
-				})
+				if account['AccountName'] and account['RoleArn'] == "":
+					if account['AccountName'] in env['EnvironmentName']:
+						fields.append({
+							'title': status + " " + env['EnvironmentName'],
+							'value': 'Version: ' + env['VersionLabel'],
+							'short': True
+						})
+				else:
+					fields.append({
+						'title': status + " " + env['EnvironmentName'] + " " + live,
+						'value': 'Version: ' + env['VersionLabel'],
+						'short': True
+					})
 			attachments.append({
 				'fallback': 'Environment List',
 				'title': 'List of Environments',
@@ -293,11 +308,19 @@ def main(text):
 						status = ":warning:"
 					elif env['Status'] == "Terminated":
 						status = ":x:"
-				fields.append({
-					'title': status + " " + env['EnvironmentName'] + " " + live,
-					'value': 'Version: ' + env['VersionLabel'],
-					'short': True
-				})
+				if account['AccountName'] and account['RoleArn'] == "":
+					if account['AccountName'] in env['EnvironmentName']:
+						fields.append({
+							'title': status + " " + env['EnvironmentName'],
+							'value': 'Version: ' + env['VersionLabel'],
+							'short': True
+						})
+				else:
+					fields.append({
+						'title': status + " " + env['EnvironmentName'] + " " + live,
+						'value': 'Version: ' + env['VersionLabel'],
+						'short': True
+					})
 
 			attachments.append({
 				'fallback': 'Environment List',

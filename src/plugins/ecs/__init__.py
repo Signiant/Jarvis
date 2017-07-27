@@ -51,8 +51,14 @@ def main(text):
 			config = json.load(f)
 		if config.get('ecs'):
 			for account in config['ecs']['Accounts']:
-				if "AccountName" not in account and "RoleArn" not in account:
-					loadedApplications = account
+				if account["RoleArn"] == "":
+					if account['AccountName'] in tokens:
+						tokens.remove(account['AccountName'])
+						loadedApplications = account['Clusters']
+						break
+					elif len(tokens) == 0:
+						loadedApplications = account['Clusters']
+						break
 
 	if len(tokens) > 0 and config != None:
 		for account in config['ecs']['Accounts']:

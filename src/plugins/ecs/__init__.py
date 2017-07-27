@@ -95,8 +95,11 @@ def main(text):
 			if len(clusters) == 0:
 				return "There are no clusters in this region: " + region
 			for cluster in clusters:
-				ret = ret + cluster.split('/')[-1] + '\n'
-
+				if account['AccountName'] and account['RoleArn'] == "":
+					if account['cluster_keyword'] in cluster:
+						ret = ret + cluster.split('/')[-1] + '\n'
+				else:
+					ret = ret + cluster.split('/')[-1] + '\n'
 			return ret
 
 		#see if tasks is in user command

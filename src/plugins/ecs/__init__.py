@@ -43,10 +43,19 @@ def main(text):
 			tokens.remove(region)
 		text.remove('in')
 
-	if len(tokens) > 0 and os.path.isfile("./aws.config"):
+	#load default account from config
+	config = None
+
+	if os.path.isfile("./aws.config"):
 		with open("aws.config") as f:
 			config = json.load(f)
-		for account in config['Accounts']:
+		if config.get('ecs'):
+			for account in config['ecs']['Accounts']:
+				if "AccountName" not in account and "RoleArn" not in account:
+					loadedApplications = account
+
+	if len(tokens) > 0 and config != None:
+		for account in config['ecs']['Accounts']:
 			if account['AccountName'] in tokens:
 				tokens.remove(account['AccountName'])
 				sts_client = boto3.client('sts')
@@ -91,6 +100,7 @@ def main(text):
 			fields = []
 			attachments = []
 
+
 			if not text:
 				return "I need a cluster name to complete the requested operation. To view the cluster names, use 'jarvis ecs list clusters <region>'"
 
@@ -100,12 +110,10 @@ def main(text):
 				try:
 					resulting_array = get_task_list(cluster=text[0], ecs=ecs)
 					query_result = ecs.describe_tasks(cluster=text[0], tasks=resulting_array)
-
 					instance_task_families = parse_tasks(query_result['tasks'], tasks_lookup_term, ecs)
 
 					if not instance_task_families:
 						return "No tasks where found matching the lookup term for tasks. To look up a particular task, use 'jarvis ecs list tasks---<optional term> running <cluster> [in <region/account>]' "
-
 
 					for tasks in instance_task_families:
 						fields.append({
@@ -480,41 +488,35 @@ def get_task_list(next_token=None, cluster=None, ecs=None):
                     running_tasks.extend(query_result['taskArns'])
     return running_tasks
 
-
-
+  
 def parse_tasks(task_list, lookup_term, plugin):
-    ''' Parse task_list and return a dict containing family:count'''
-    task_families = {}
-    for task in task_list:
+	''' Parse task_list and return a dict containing family:count'''
+	task_families = {}
+	for task in task_list:
+		family = task['taskDefinitionArn'].split("/")[-1]
+		try:
+			image = plugin.describe_task_definition(taskDefinition=family)
+		except Exception as e:
+			print "Error could not retrieve image "+str(e)
+			image = []
+		if image:
+			version_name = image['taskDefinition']['containerDefinitions'][0]['image'].split('/')[-1].split(':')[-1]
+			if tasks_add_not_blank(family, lookup_term):
+				if family not in task_families:
+					task_families[family] = {}
+					task_families[family]['count'] = 1
+					task_families[family]['version'] = version_name
+				else:
+					task_families[family]['count'] = task_families[family]['count'] + 1
 
-        # Get the task type (service or family)
-        type = task['group'].split(':')[0]
-        # Get the task family for this task
-        family = task['group'].split(':')[-1]
-
-
-        image = plugin.describe_task_definition(taskDefinition=family)
-        version_name = image['taskDefinition']['containerDefinitions'][0]['image'].split('/')[-1].split(':')[-1]
-
-        if tasks_add_not_blank(family, lookup_term):
-            if type == "family":
-                if family not in task_families:
-                    task_families[family] = {}
-                    task_families[family]['count'] = 1
-                    task_families[family]['version'] = version_name
-                else:
-                    task_families[family]['count'] = task_families[family]['count'] + 1
-
-    return task_families
+	return task_families
 
 
 def tasks_add_not_blank(theword, lookup_word):
-
     if not lookup_word:
         return True
     else:
         if theword.lower().find(str(lookup_word.lower())) > -1:
-
             return True
         else:
             return False
@@ -536,12 +538,14 @@ def tasks_get_lookup_term(text):
             else:
                 return data[(data.lower().find('---') + 3):]
 
-#retrieve data from config files for compare
-def get_in_ecs_compare_data(config, args, args_eval):
 
+
+# retrieve data from config files for compare
+def get_in_ecs_compare_data(config, args, args_eval):
 	result = dict()
 
-	#Depending on the arguments provided the values for cluster, region and account are determined as follows...
+	# Depending on the arguments provided the values for cluster, region and account are determined as follows...
+
 	#	if the args_eval did not recieve a cluster from user than args_eval == 3
 	#	if the args_eval did recieve a cluster from user than args_eval == 4
 	if args_eval == 3:
@@ -553,7 +557,7 @@ def get_in_ecs_compare_data(config, args, args_eval):
 		result['region_name'] = args[2]
 		result['account'] = args[3]
 
-	for account in config['Accounts']:
+	for account in config['ecs']['Accounts']:
 		if account['AccountName'] == result['account']:
 			result['RoleArn'] = account['RoleArn']
 			for the_region in account['Clusters']:
@@ -561,20 +565,21 @@ def get_in_ecs_compare_data(config, args, args_eval):
 					if result['cluster_name'] == None:
 						result['cluster_name'] = account['Clusters'][the_region]['cluster_list']
 					result['environment_code_name'] = account['Clusters'][the_region]['environment_code_name']
-					result['service_exclude_list'] = account['Clusters'][the_region]['service_exclude_list']
+					result['service_exclude_list'] = config['ecs']['service_exclude_list']
 					result['team_name'] = account['Clusters'][the_region]['team_name']
 	if result.has_key('environment_code_name') == False:
-		for the_region in config['Clusters']:
-			if the_region == result['region_name']:
-				if result['account'] == config['Clusters'][the_region]['team_name']:
-					if result['cluster_name'] == None:
-						result['cluster_name'] = config['Clusters'][the_region]['cluster_list']
-					result['environment_code_name'] = config['Clusters'][the_region]['environment_code_name']
-					result['service_exclude_list'] = config['Clusters'][the_region]['service_exclude_list']
-					result['RoleArn'] = None
-					result['team_name'] = config['Clusters'][the_region]['team_name']
+		for the_clusters in config['ecs']['Accounts']:
+			for the_region in the_clusters['Clusters']:
+				if the_region == result['region_name']:
+					if result['account'] == the_clusters['Clusters'][the_region]['team_name']:
+						if result['cluster_name'] == None:
+							result['cluster_name'] = the_clusters['Clusters'][the_region]['cluster_list']
+						result['environment_code_name'] = the_clusters['Clusters'][the_region]['environment_code_name']
+						result['service_exclude_list'] = config['ecs']['service_exclude_list']
+						result['RoleArn'] = None
+						result['team_name'] = the_clusters['Clusters'][the_region]['team_name']
 
-	#if no data was pulled from config file than return 0
+	# if no data was pulled from config file than return 0
 	if len(result) <= 3:
 		return 0
 

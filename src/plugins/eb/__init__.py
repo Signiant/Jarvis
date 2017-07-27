@@ -7,7 +7,6 @@ import requests
 import os.path
 from datetime import *
 import sys
-import pprint
 import compare_output
 import common
 
@@ -20,8 +19,8 @@ import eb_compares
 def main(text):
 	regionList = ['us-east-1', 'us-west-1', 'us-west-2', 'eu-west-1', 'ap-northeast-1', 'ap-southeast-2']
 	region = regionList[0]
-	
-	text.pop(0) # remove command name
+
+	text.pop(0)  # remove command name
 	if len(text) == 0:
 		return "You did not supply a query to run"
 	if text[0] == 'help':
@@ -32,12 +31,17 @@ def main(text):
 	awsSessionToken = None
 	loadedApplications = None
 	tokens = []
+
+
 	config = None
 	if os.path.isfile("./aws.config"):
 		with open("aws.config") as f:
 			config = json.load(f)
-		if config.get('Applications'):
-			loadedApplications = config['Applications']
+		if config.get('eb'):
+			for account in config['eb']['Accounts']:
+				if account["AccountName"] == "" and account["RoleArn"] == "":
+					loadedApplications = account['Applications']
+					break
 
 	if 'in' in text:
 		while text[-1] != 'in':
@@ -49,23 +53,24 @@ def main(text):
 		text.remove('in')
 
 	if len(tokens) > 0 and config != None:
-			for account in config['Accounts']:
-				if account['AccountName'] in tokens:
-					tokens.remove(account['AccountName'])
-					sts_client = boto3.client('sts')
-					assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'], RoleSessionName="AssumedRole")
-					awsKeyId = assumedRole['Credentials']['AccessKeyId']
-					awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
-					awsSessionToken = assumedRole['Credentials']['SessionToken']
-					# Load application settings for this account
-					if account.get('Applications'):
-						loadedApplications = account['Applications']
-			if len(tokens) > 0:
-				return "Could not resolve " + " ".join(tokens)
+		for account in config['eb']['Accounts']:
+			if account['AccountName'] in tokens:
+				tokens.remove(account['AccountName'])
+				sts_client = boto3.client('sts')
+				assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'], RoleSessionName="AssumedRole")
+				awsKeyId = assumedRole['Credentials']['AccessKeyId']
+				awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
+				awsSessionToken = assumedRole['Credentials']['SessionToken']
+				# Load application settings for this account
+				if account.get('Applications'):
+					loadedApplications = account['Applications']
+		if len(tokens) > 0:
+			return "Could not resolve " + " ".join(tokens)
 	elif len(tokens) > 0:
 		return "Could not locate aws.config file"
 
-	session = boto3.session.Session(aws_access_key_id=awsKeyId, aws_secret_access_key=awsSecretKey, aws_session_token=awsSessionToken)
+	session = boto3.session.Session(aws_access_key_id=awsKeyId, aws_secret_access_key=awsSecretKey,
+									aws_session_token=awsSessionToken)
 
 	eb = session.client("elasticbeanstalk", region_name=region)
 
@@ -80,10 +85,8 @@ def main(text):
 				return "Could not describe applications in " + region
 			if len(applications) == 0:
 				return "There are no beanstalk applications in this region: " + region
-
 			for app in applications:
 				ret = ret + app['ApplicationName'] + "\n"
-				
 			return ret
 		elif 'environments' in text or 'envs' in text:
 			text.pop(0)
@@ -120,25 +123,29 @@ def main(text):
 									print "Looping"
 									if account['AccountName'] == app['Account']:
 										sts_client = boto3.client('sts')
-										assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'], RoleSessionName="AssumedRole")
+										assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'],
+																			 RoleSessionName="AssumedRole")
 										awsKeyId = assumedRole['Credentials']['AccessKeyId']
 										awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
 										awsSessionToken = assumedRole['Credentials']['SessionToken']
 
-										session_temp = boto3.session.Session(aws_access_key_id=awsKeyId, aws_secret_access_key=awsSecretKey, aws_session_token=awsSessionToken)
+										session_temp = boto3.session.Session(aws_access_key_id=awsKeyId,
+																			 aws_secret_access_key=awsSecretKey,
+																			 aws_session_token=awsSessionToken)
 
 										r = session_temp.client('route53', region_name=region)
 							else:
-							    r = session.client('route53', region_name=region)
+								r = session.client('route53', region_name=region)
 
-							records = r.list_resource_record_sets(HostedZoneId=app['HostedZoneId'], StartRecordName=app['DNSRecord'], StartRecordType='A')
-							
+							records = r.list_resource_record_sets(HostedZoneId=app['HostedZoneId'],
+																  StartRecordName=app['DNSRecord'], StartRecordType='A')
+
 							activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
 						except:
 							pass
 			for env in environments:
 				live = ""
-				if activeLoadBalancer != None :
+				if activeLoadBalancer != None:
 					if env['EndpointURL'].lower() in activeLoadBalancer.lower():
 						live = ":live-environment:"
 				status = ":healthy-environment:"
@@ -157,19 +164,19 @@ def main(text):
 					elif env['Status'] == "Terminated":
 						status = ":x:"
 				fields.append({
-						'title': status + " " + env['EnvironmentName'] + " " + live,
-						'value': 'Version: ' + env['VersionLabel'],
-						'short': True
-					})
-			attachments.append({
-					'fallback': 'Environment List',
-					'title': 'List of Environments',
-					'fields': fields,
-					'color': 'good'
+					'title': status + " " + env['EnvironmentName'] + " " + live,
+					'value': 'Version: ' + env['VersionLabel'],
+					'short': True
 				})
+			attachments.append({
+				'fallback': 'Environment List',
+				'title': 'List of Environments',
+				'fields': fields,
+				'color': 'good'
+			})
 			return attachments
 
-	if 'compare' in text:
+	elif 'compare' in text:
 		text.remove("compare")
 
 		if "with" in text and len(filter(None, text)) == 7:
@@ -181,11 +188,13 @@ def main(text):
 
 			if master_args_eval and team_args_eval:
 
+
 				config = None
 				# load config file
 				if os.path.isfile("./aws.config"):
 					with open("aws.config") as f:
 						config = json.load(f)
+
 
 				if config:
 					master_data = get_in_eb_compare_data(config, master_args, master_args_eval)
@@ -194,18 +203,21 @@ def main(text):
 					return "Config file was not loaded"
 
 				if master_data and team_data:
+
 					superjenkins_data = common.get_superjenkins_data(config["General"]["script_tags"]["beginning_tag"],
-															  config["General"]["script_tags"]["ending_tag"],
-															  config["General"]["build_link"],
-															  config["General"]["my_build_key"])
+																	 config["General"]["script_tags"]["ending_tag"],
+																	 config["General"]["build_link"],
+																	 config["General"]["my_build_key"])
 
 					if superjenkins_data:
 						compared_data = eb_compares.main_eb_check_versions(master_data,
 																		   team_data,
 																		   superjenkins_data,
-																		   config["General"]["jenkins"]["branch_equivalent_tags"])
+																		   config["General"]["jenkins"][
+																			   "branch_equivalent_tags"])
+						#this uses compare_output
 						attachments = compare_output.slack_payload(compared_data, team_data['team_name'])
-			
+
 						return attachments
 
 				else:
@@ -226,7 +238,7 @@ def main(text):
 				environments = eb.describe_environments(ApplicationName=application)['Environments']
 			except Exception as e:
 				print e
-				return "Could not describe "+ " ".join(text) + " in " + region
+				return "Could not describe " + " ".join(text) + " in " + region
 			if len(environments) == 0:
 				return "There are no beanstalk environments in this application: " + " ".join(text)
 
@@ -241,25 +253,29 @@ def main(text):
 									print "Looping"
 									if account['AccountName'] == app['Account']:
 										sts_client = boto3.client('sts')
-										assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'], RoleSessionName="AssumedRole")
+										assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'],
+																			 RoleSessionName="AssumedRole")
 										awsKeyId = assumedRole['Credentials']['AccessKeyId']
 										awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
 										awsSessionToken = assumedRole['Credentials']['SessionToken']
-					
-										session_temp = boto3.session.Session(aws_access_key_id=awsKeyId, aws_secret_access_key=awsSecretKey, aws_session_token=awsSessionToken)
+
+										session_temp = boto3.session.Session(aws_access_key_id=awsKeyId,
+																			 aws_secret_access_key=awsSecretKey,
+																			 aws_session_token=awsSessionToken)
 
 										r = session_temp.client('route53', region_name=region)
 							else:
-							    r = session.client('route53', region_name=region)
+								r = session.client('route53', region_name=region)
 
-							records = r.list_resource_record_sets(HostedZoneId=app['HostedZoneId'], StartRecordName=app['DNSRecord'], StartRecordType='A')
-							
+							records = r.list_resource_record_sets(HostedZoneId=app['HostedZoneId'],
+																  StartRecordName=app['DNSRecord'], StartRecordType='A')
+
 							activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
 						except:
 							pass
 			for env in environments:
- 				live = ""
-				if activeLoadBalancer != None :
+				live = ""
+				if activeLoadBalancer != None:
 					if env['EndpointURL'].lower() in activeLoadBalancer.lower():
 						live = ":live-environment:"
 				status = ":healthy-environment:"
@@ -278,17 +294,17 @@ def main(text):
 					elif env['Status'] == "Terminated":
 						status = ":x:"
 				fields.append({
-						'title': status + " " + env['EnvironmentName'] + " "  + live,
-						'value': 'Version: ' + env['VersionLabel'],
-						'short': True
-					})
+					'title': status + " " + env['EnvironmentName'] + " " + live,
+					'value': 'Version: ' + env['VersionLabel'],
+					'short': True
+				})
 
 			attachments.append({
-					'fallback': 'Environment List',
-					'title': 'List of Environments',
-					'fields': fields,
-					'color': 'good'
-				})
+				'fallback': 'Environment List',
+				'title': 'List of Environments',
+				'fields': fields,
+				'color': 'good'
+			})
 			return attachments
 
 		elif 'environment' in text or 'env' in text:
@@ -312,7 +328,7 @@ def main(text):
 				return "Environment " + environment + " was not found in region " + region
 
 			events = eb.describe_events(EnvironmentName=environment,
-										MaxRecords=5, 
+										MaxRecords=5,
 										Severity="WARN",
 										StartTime=datetime.today() - timedelta(days=1))['Events']
 			resources = eb.describe_environment_resources(EnvironmentName=environment)['EnvironmentResources']
@@ -321,36 +337,36 @@ def main(text):
 			if len(resources['LoadBalancers']) > 0:
 				loadBalancerName = resources['LoadBalancers'][0]['Name']
 			fields = []
-		
+
 			version = description['VersionLabel']
 			runningInstances = len(instances)
 			fields.append({
-					'title': 'Current Deployment',
-					'value': 'Version: ' + version,
-					'short': True
-				})
+				'title': 'Current Deployment',
+				'value': 'Version: ' + version,
+				'short': True
+			})
 			fields.append({
-					'title': 'Running Instances',
-					'value': str(runningInstances) + ' Instances',
-					'short': True
-				})
+				'title': 'Running Instances',
+				'value': str(runningInstances) + ' Instances',
+				'short': True
+			})
 			fields.append({
-					'title': 'Container Version',
-					'value': description['SolutionStackName'],
-					'short': True
-				})
+				'title': 'Container Version',
+				'value': description['SolutionStackName'],
+				'short': True
+			})
 			fields.append({
-					'title': 'Last Updated',
-					'value': description['DateUpdated'].strftime("%d/%m at %H:%M"),
-					'short': True
-				})
+				'title': 'Last Updated',
+				'value': description['DateUpdated'].strftime("%d/%m at %H:%M"),
+				'short': True
+			})
 
 			for event in events:
 				fields.append({
-						'title': event['Severity'] + " at " + event['EventDate'].strftime("%d/%m at %H:%M"),
-						'value': event['Message'],
-						'short': True
-					})
+					'title': event['Severity'] + " at " + event['EventDate'].strftime("%d/%m at %H:%M"),
+					'value': event['Message'],
+					'short': True
+				})
 
 			status = ":healthy-environment:"
 			health = description['Health']
@@ -369,11 +385,11 @@ def main(text):
 					status = ":x:"
 
 			attachments.append({
-					'fallback': 'Environment List',
-					'title':  status + " " + environment,
-					'fields': fields,
-					'color': 'good'
-				})
+				'fallback': 'Environment List',
+				'title': status + " " + environment,
+				'fields': fields,
+				'color': 'good'
+			})
 
 			if graph != False and loadBalancerName != None:
 				cw = session.client('cloudwatch', region_name=region)
@@ -381,61 +397,63 @@ def main(text):
 				latdata = []
 				timedata = None
 				if graphType == None or graphType == 'requests':
-					envrequests = cw.get_metric_statistics(	Namespace="AWS/ELB", 
-															MetricName="RequestCount", 
-															Dimensions=[{'Name': 'LoadBalancerName', 'Value': loadBalancerName}],
-															StartTime=datetime.today() - timedelta(days=1),
-															EndTime=datetime.today(),
-															Period=1800,
-															Statistics=['Sum'],
-															Unit='Count')
+					envrequests = cw.get_metric_statistics(Namespace="AWS/ELB",
+														   MetricName="RequestCount",
+														   Dimensions=[
+															   {'Name': 'LoadBalancerName', 'Value': loadBalancerName}],
+														   StartTime=datetime.today() - timedelta(days=1),
+														   EndTime=datetime.today(),
+														   Period=1800,
+														   Statistics=['Sum'],
+														   Unit='Count')
 					for datapoint in envrequests['Datapoints']:
 						reqdata.append([datapoint['Timestamp'], datapoint['Sum']])
 					reqdata = sorted(reqdata, key=lambda x: x[0])
 					timedata = [i[0].strftime("%I%M") for i in reqdata]
 
 				if graphType == None or graphType == 'latency':
-					envlatency = cw.get_metric_statistics(	Namespace="AWS/ELB", 
-															MetricName="Latency", 
-															Dimensions=[{'Name': 'LoadBalancerName', 'Value': loadBalancerName}],
-															StartTime=datetime.utcnow() - timedelta(days=1),
-															EndTime=datetime.utcnow(),
-															Period=1800,
-															Statistics=['Average'],
-															Unit='Seconds')
+					envlatency = cw.get_metric_statistics(Namespace="AWS/ELB",
+														  MetricName="Latency",
+														  Dimensions=[
+															  {'Name': 'LoadBalancerName', 'Value': loadBalancerName}],
+														  StartTime=datetime.utcnow() - timedelta(days=1),
+														  EndTime=datetime.utcnow(),
+														  Period=1800,
+														  Statistics=['Average'],
+														  Unit='Seconds')
 					for datapoint in envlatency['Datapoints']:
 						latdata.append([datapoint['Timestamp'], datapoint['Average']])
 					latdata = sorted(latdata, key=lambda x: x[0])
 					if timedata == None:
 						timedata = [i[0].strftime("%I%M") for i in latdata]
 
-				attachments.append(common.create_graph('Graphing Environment Requests and Latency over 1 day', 
-						'Requests (Count)', [i[1] for i in reqdata], 
-						'Latency (Seconds)', [i[1] for i in latdata], 
-						timedata))
+				attachments.append(common.create_graph('Graphing Environment Requests and Latency over 1 day',
+													   'Requests (Count)', [i[1] for i in reqdata],
+													   'Latency (Seconds)', [i[1] for i in latdata],
+													   timedata))
+			return attachments
 
-			return attachments 
-			
 	elif 'unpause' in text or 'unp' in text:
 		text.pop(0)
 		environment = " ".join(text)
 		message = "Environment " + environment + " has been unpaused"
-		
+
 		try:
 			resources = eb.describe_environment_resources(EnvironmentName=environment)['EnvironmentResources']
 		except Exception as e:
 			print e
 			return "Environment " + environment + " was not found in region " + region
-			
+
 		autoscalerName = resources['AutoScalingGroups'][0]['Name']
 		asClient = session.client('autoscaling', region_name=region)
-		autoscaler = asClient.describe_auto_scaling_groups(AutoScalingGroupNames=[autoscalerName])['AutoScalingGroups'][0]
-		
+		autoscaler = asClient.describe_auto_scaling_groups(AutoScalingGroupNames=[autoscalerName])['AutoScalingGroups'][
+			0]
+
 		if autoscaler['MaxSize'] != 0 or autoscaler['MinSize'] != 0:
 			return "Environment " + environment + " is not currently paused"
-		
-		autoscalerTags= autoscaler['Tags']
-		
+
+		autoscalerTags = autoscaler['Tags']
+
 		try:
 			minInstances = int(next((tag['Value'] for tag in autoscalerTags if tag['Key'] == 'pause:max-instances')))
 			maxInstances = int(next((tag['Value'] for tag in autoscalerTags if tag['Key'] == 'pause:min-instances')))
@@ -444,7 +462,6 @@ def main(text):
 			maxInstances = 1
 			message += "\nTags were missing for instance size on the autoscaling group, max and min instances set to a default of 1"
 
-			
 		try:
 			asClient.update_auto_scaling_group(
 				AutoScalingGroupName=autoscalerName,
@@ -454,14 +471,16 @@ def main(text):
 		except Exception as e:
 			print e
 			return "Unable to unpause environment " + environment
-		
+
 		return message
-		
+
 	else:
 		return "I did not understand the query. Please try again."
 
+
 def about():
 	return "This plugin returns requested information regarding AWS Elastic Beanstalk"
+
 
 def information():
 	return """This plugin returns various information about clusters and services hosted on ECS.
@@ -472,6 +491,7 @@ def information():
 	jarvis eb describe|desc environment|env <environment> <graph> <latency|requests> <in region/account> [sendto <user or channel>]
 	jarvis eb unpause|unp <environment> <in region/account> [sendto <user or channel>]
 	jarvis eb compare within <region> <account> with within <region> <account> [sendto <user or channel>]"""
+
 
 def eval_args(args,regionList):
 
@@ -485,61 +505,69 @@ def eval_args(args,regionList):
 	else:
 		return 0
 
+
 #get the dev account role for specified account_name
 def config_get_account_rolearn(account_name, config):
 	role_arn = None
-	for account in config['Accounts']:
+	for account in config['eb']['Accounts']:
 		if account['AccountName'] == account_name:
 			role_arn = account['RoleArn']
 			return role_arn
 	return role_arn
 
-def get_in_eb_compare_data(config, args, args_eval ):
 
+def get_in_eb_compare_data(config, args, args_eval):
 	result = dict()
+	original_config = config
+	if config.get('eb'):
+		config = config['eb']['Accounts']
 
-	#both region and account found
-	if args_eval == 1:
-		result['account'] = args[2]
-		result['region_name'] = args[1]
+		# both region and account found
+		if args_eval == 1:
+			result['account'] = args[2]
+			result['region_name'] = args[1]
+			for account in config:
 
-		for account in config['Accounts']:
-			if account['AccountName'] == result['account']:
-				result['RoleArn'] = account['RoleArn']
+				if account['AccountName'] == result['account']:
+					result['RoleArn'] = account['RoleArn']
+					temp_holder = dict()
+					for the_region in account['Applications']:
+						if the_region == result['region_name']:
+							result['environments'] = account['Applications'][the_region]
+							for envs in account['Applications'][the_region]:
+								if envs.has_key("Account"):
+									# if an alternate account is specifed for the environment than put the
+									# appropriate role_arn data for that environment
+									temp_holder[envs['ApplicationName']] = {'dns_name': envs['DNSRecord'],
+																			'zone_id': envs['HostedZoneId'],
+																			'build_master_tag': envs['build_master_tag'],
+																			'alternate_role_arn': config_get_account_rolearn(
+																				envs['Account'], original_config)}
+								else:
+									temp_holder[envs['ApplicationName']] = {'dns_name': envs['DNSRecord'],
+																			'zone_id': envs['HostedZoneId'],
+																			'build_master_tag': envs['build_master_tag']}
+								if envs.has_key('team_name'):
+									result['team_name'] = envs["team_name"]
+								result['environments'] = temp_holder
+			if result.has_key('team_name') == False:
 				temp_holder = dict()
-				for the_region in account['Applications']:
-					if the_region == result['region_name']:
-						result['environments'] = account['Applications'][the_region]
-						for envs in account['Applications'][the_region]:
-							if envs.has_key("Account"):
-								#if an alternate account is specifed for the environment than put the
-								# appropriate role_arn data for that environment
-								temp_holder[envs['ApplicationName']] = {'dns_name': envs['DNSRecord'],
-																		'zone_id': envs['HostedZoneId'],
-																		'build_master_tag': envs['build_master_tag'],
-																		'alternate_role_arn':config_get_account_rolearn(envs['Account'], config)}
-							else:
-								temp_holder[envs['ApplicationName']] = {'dns_name': envs['DNSRecord'],
-																	    'zone_id': envs['HostedZoneId'],
-																	    'build_master_tag': envs['build_master_tag']}
-							if envs.has_key('team_name'):
-								result['team_name'] = envs["team_name"]
-					result['environments'] = temp_holder
-		if result.has_key('team_name') == False:
-			temp_holder = dict()
-			for the_region in config['Applications']:
-				if the_region == result['region_name']:
-					for envs in config['Applications'][the_region]:
-						temp_holder[envs['ApplicationName']] = {'dns_name': envs['DNSRecord'],
-																'zone_id': envs['HostedZoneId'],
-																'build_master_tag': envs['build_master_tag']}
-						if envs.has_key('team_name'):
-							if envs['team_name'] == result['account']:
-								result['RoleArn'] = None
-								result['team_name'] = envs['team_name']
-				result['environments'] = temp_holder
-	#if config data was not extracted then return zero
-	if len(result) <= 2:
-		return 0
+				for account in config:
+					if account['RoleArn'] == "" and account['AccountName'] == "":
+						for the_region in account['Applications']:
+							if the_region == result['region_name']:
+								for envs in account['Applications'][the_region]:
+									temp_holder[envs['ApplicationName']] = {'dns_name': envs['DNSRecord'],
+																				'zone_id': envs['HostedZoneId'],
+																				'build_master_tag': envs['build_master_tag']}
+									if envs.has_key('team_name'):
+										if envs['team_name'] == result['account']:
+											result['RoleArn'] = None
+											result['team_name'] = envs['team_name']
+								result['environments'] = temp_holder
 
-	return result
+		# if config data was not extracted then return zero
+		if len(result) <= 2:
+			return 0
+
+		return result

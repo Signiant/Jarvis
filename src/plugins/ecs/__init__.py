@@ -33,6 +33,8 @@ def main(text):
 	awsSecretKey = None
 	awsSessionToken = None
 
+	the_account = None
+
 	tokens = []
 	if 'in' in text:
 		while text[-1] != 'in':
@@ -51,24 +53,22 @@ def main(text):
 			config = json.load(f)
 		if config.get('ecs'):
 			for account in config['ecs']['Accounts']:
-				if account["RoleArn"] == "":
-					if account['AccountName'] in tokens:
-						tokens.remove(account['AccountName'])
-						loadedApplications = account['Clusters']
-						break
-					elif len(tokens) == 0:
-						loadedApplications = account['Clusters']
-						break
+				if account["RoleArn"] == "" and account['AccountName'] == "":
+					loadedApplications = account['Clusters']
+
 
 	if len(tokens) > 0 and config != None:
 		for account in config['ecs']['Accounts']:
 			if account['AccountName'] in tokens:
+				the_account = account['AccountName']
 				tokens.remove(account['AccountName'])
-				sts_client = boto3.client('sts')
-				assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'], RoleSessionName="AssumedRole")
-				awsKeyId = assumedRole['Credentials']['AccessKeyId']
-				awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
-				awsSessionToken = assumedRole['Credentials']['SessionToken']
+				if account['RoleArn']:
+					sts_client = boto3.client('sts')
+					assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'], RoleSessionName="AssumedRole")
+					awsKeyId = assumedRole['Credentials']['AccessKeyId']
+					awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
+					awsSessionToken = assumedRole['Credentials']['SessionToken']
+					break
 		if len(tokens) > 0:
 			return "Could not resolve " + " ".join(tokens)
 	elif len(tokens) > 0:
@@ -95,7 +95,8 @@ def main(text):
 			if len(clusters) == 0:
 				return "There are no clusters in this region: " + region
 			for cluster in clusters:
-				if account['AccountName'] and account['RoleArn'] == "":
+				if the_account and account['RoleArn'] == "":
+
 					if account['cluster_keyword'] in cluster:
 						ret = ret + cluster.split('/')[-1] + '\n'
 				else:
@@ -127,10 +128,8 @@ def main(text):
 					for tasks in instance_task_families:
 						fields.append({
 								'title': tasks,
-
 								'value': 'Version: '+str(instance_task_families[tasks]['version'])+ '\nCount: '
 										 + str(instance_task_families[tasks]['count']),
-
 								'short': True
 							})
 

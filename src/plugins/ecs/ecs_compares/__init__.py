@@ -84,7 +84,7 @@ def compare_environment(team_env, master_env, jenkin_build_terms):
         if team_env == master_env:
             result = 1
         else:
-            if jenkin_build_terms[0] in master_env or jenkin_build_terms[1] in master_env:
+            if (jenkin_build_terms[0] in team_env or jenkin_build_terms[1] in team_env):
                 result = 2
             else:
                 result = 3
@@ -218,6 +218,10 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
                             if the_team_service_name[0] == the_master_service_name[0]:
                                 if m_data in not_in_team_array:
                                     not_in_team_array.remove(m_data)
+
+                                #############################################
+                                print t_array['version'], " compare ", m_data['version']
+
                                 amatch = compare_environment(t_array['version'], m_data['version'], jenkins_build_tags)
                                 logging.debug(t_array['version'] + " === " + m_data['version'] + "\n")
 

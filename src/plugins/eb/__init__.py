@@ -170,19 +170,11 @@ def main(text):
 						status = ":warning:"
 					elif env['Status'] == "Terminated":
 						status = ":x:"
-				if account['AccountName'] and account['RoleArn'] == "":
-					if account['AccountName'] in env['EnvironmentName']:
-						fields.append({
-							'title': status + " " + env['EnvironmentName'],
-							'value': 'Version: ' + env['VersionLabel'],
-							'short': True
-						})
-				else:
-					fields.append({
-						'title': status + " " + env['EnvironmentName'] + " " + live,
-						'value': 'Version: ' + env['VersionLabel'],
-						'short': True
-					})
+				fields.append({
+					'title': status + " " + env['EnvironmentName'] + " " + live,
+					'value': 'Version: ' + env['VersionLabel'],
+					'short': True
+				})
 			attachments.append({
 				'fallback': 'Environment List',
 				'title': 'List of Environments',

@@ -56,6 +56,7 @@ def main(text):
 				if account["RoleArn"] == "" and account['AccountName'] == "":
 					loadedApplications = account['Clusters']
 
+
 	if len(tokens) > 0 and config != None:
 		for account in config['ecs']['Accounts']:
 			if account['AccountName'] in tokens:
@@ -95,6 +96,7 @@ def main(text):
 				return "There are no clusters in this region: " + region
 			for cluster in clusters:
 				if the_account and account['RoleArn'] == "":
+
 					if account['cluster_keyword'] in cluster:
 						ret = ret + cluster.split('/')[-1] + '\n'
 				else:

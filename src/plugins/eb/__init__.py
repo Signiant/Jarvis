@@ -170,11 +170,11 @@ def main(text):
 						status = ":warning:"
 					elif env['Status'] == "Terminated":
 						status = ":x:"
-				fields.append({
-					'title': status + " " + env['EnvironmentName'] + " " + live,
-					'value': 'Version: ' + env['VersionLabel'],
-					'short': True
-				})
+        fields.append({
+          'title': status + " " + env['EnvironmentName'] + " " + live,
+          'value': 'Version: ' + env['VersionLabel'],
+          'short': True
+        })
 			attachments.append({
 				'fallback': 'Environment List',
 				'title': 'List of Environments',
@@ -306,6 +306,7 @@ def main(text):
 					'value': 'Version: ' + env['VersionLabel'],
 					'short': True
 				})
+
 
 			attachments.append({
 				'fallback': 'Environment List',

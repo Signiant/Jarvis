@@ -51,8 +51,14 @@ def main(text):
 			config = json.load(f)
 		if config.get('ecs'):
 			for account in config['ecs']['Accounts']:
-				if "AccountName" not in account and "RoleArn" not in account:
-					loadedApplications = account
+				if account["RoleArn"] == "":
+					if account['AccountName'] in tokens:
+						tokens.remove(account['AccountName'])
+						loadedApplications = account['Clusters']
+						break
+					elif len(tokens) == 0:
+						loadedApplications = account['Clusters']
+						break
 
 	if len(tokens) > 0 and config != None:
 		for account in config['ecs']['Accounts']:
@@ -89,8 +95,11 @@ def main(text):
 			if len(clusters) == 0:
 				return "There are no clusters in this region: " + region
 			for cluster in clusters:
-				ret = ret + cluster.split('/')[-1] + '\n'
-
+				if account['AccountName'] and account['RoleArn'] == "":
+					if account['cluster_keyword'] in cluster:
+						ret = ret + cluster.split('/')[-1] + '\n'
+				else:
+					ret = ret + cluster.split('/')[-1] + '\n'
 			return ret
 
 		#see if tasks is in user command

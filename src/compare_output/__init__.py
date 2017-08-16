@@ -15,6 +15,7 @@ def get_themessage(value):
     elif value == 3:
         return "Branch repo"
 
+
 def display_results(data_array):
     for value in data_array:
         themessage = get_themessage(value["Match"])
@@ -23,6 +24,7 @@ def display_results(data_array):
               + " * Team: " +value['team']+ " T_Environment = ["+value['team_env'] + "] * T_Version " + value['team_version']
               + "master updated on "+ value["team_updateddate"].strftime('%m/%d/%Y %H:%M:%S')
               +" === "+ themessage+"\n")
+
 
 def add_indent_fields(fields):
     fields.append({
@@ -63,7 +65,7 @@ def append_to_field(fields, value, mastername):
             "title": shorten_input(value['team_env']),
             "value": value['team_version'] + format_the_time(value["team_updateddate"]),
             "short": "true"
-        })
+    })
     fields.append({
         # adding master data
         #--trying mastername+": "+
@@ -77,70 +79,69 @@ def append_to_field(fields, value, mastername):
 
     return 1
 
-#align the top headers for each plugin and match output
-def add_blank_space(left_header):
-    spaces_to_add = 50 - len(left_header)
+#create the title containing left and right that will be the title
+def create_title_dictionary_add_in(field, left_title,right_title,color):
 
-    if spaces_to_add >= 0:
-        blank_spaces = spaces_to_add * " "
-        result = str(left_header)+blank_spaces
-    else:
-        spaces_to_add = 50 - len(shorten_input(left_header))
-        blank_spaces = spaces_to_add * " "
-        result = str(left_header) + blank_spaces
-    return result
+	insert_the_left_title = {
+		'title': left_title,
+		'value': "",
+		'short': "true"
+	}
+
+	insert_the_right_title = {
+		'title': right_title,
+		'value': "",
+		'short': "true"
+	}
+
+	field.insert(0, insert_the_left_title)
+	field.insert(1, insert_the_right_title)
+
+	return {'fields': field, 'color': color}
 
 
-#create attachment for each plugin
+# create attachment for each plugin
 def create_plugin_format(thedata, thetitle_beginning):
+	field_matching = []
+	field_not_matching = []
+	field_repo = []
 
-    field_matching = []
-    field_not_matching = []
-    field_repo = []
-    theattachment = []
+	theattachment = []
 
-    for value in thedata:
-        if value["Match"] == 1:
-            append_to_field(field_matching, value, value['mastername'])
-        if value["Match"] == 2:
-            append_to_field(field_not_matching, value, value['mastername'])
-        if value["Match"] == 3:
-            append_to_field(field_repo, value, value['mastername'])
+	for value in thedata:
+		if value["Match"] == 1:
+			append_to_field(field_matching, value, value['mastername'])
+		if value["Match"] == 2:
+			append_to_field(field_not_matching, value, value['mastername'])
+		if value["Match"] == 3:
+			append_to_field(field_repo, value, value['mastername'])
 
-    #master team name with first letter capitalized
-    master_name_edited = str(value['mastername']).title()
+	# master team name with first letter capitalized
+	master_name_edited = str(value['mastername']).title()
 
-    # append not matching
-    if field_not_matching:
-        left_the_title = thetitle_beginning.title() + "s not matching  " + master_name_edited
-        right_the_title = shorten_input(master_name_edited +" "+thetitle_beginning+"s ")
-        the_color = "#ec1010"
+	# append not matching
+	if field_not_matching:
+		left_the_title = thetitle_beginning.title() + "s not matching " + master_name_edited
+		right_the_title = shorten_input(master_name_edited + " " + thetitle_beginning + "s ")
+		the_color = "#ec1010"
+		theattachment.append(create_title_dictionary_add_in(field_not_matching, left_the_title,right_the_title,the_color))
 
-        field_not_matching[0]['title'] = add_blank_space(left_the_title.title())+ str(field_not_matching[0]['title']).title()
-        field_not_matching[1]['title'] = add_blank_space(right_the_title.title())+ str(field_not_matching[1]['title']).title()
-        theattachment.append({'fields': field_not_matching, 'color': the_color})
+	# append repos
+	if field_repo:
+		left_the_title = thetitle_beginning.title() + " dev branches"
+		right_the_title = shorten_input(master_name_edited + " " + thetitle_beginning + "s ")
+		the_color = "#fef65b"
+		theattachment.append(create_title_dictionary_add_in(field_repo, left_the_title, right_the_title, the_color))
 
-    # append repos
-    if field_repo:
-        left_the_title = thetitle_beginning.title() + " dev branches"
-        right_the_title = shorten_input(master_name_edited +" "+thetitle_beginning+"s ")
-        the_color = "#fef65b"
+	# append matching
+	if field_matching:
+		left_the_title = thetitle_beginning + "s matching " + master_name_edited
+		right_the_title = shorten_input(master_name_edited + " " + thetitle_beginning + "s ")
+		the_color = "#7bcd8a"
+		theattachment.append(create_title_dictionary_add_in(field_matching, left_the_title, right_the_title, the_color))
 
-        field_repo[0]['title'] = add_blank_space(left_the_title.title())+ str(field_repo[0]['title']).title()
-        field_repo[1]['title'] = add_blank_space(right_the_title.title())+ str(field_repo[1]['title']).title()
-        theattachment.append({'fields': field_repo, 'color': the_color})
 
-    # append matching
-    if field_matching:
-        left_the_title = thetitle_beginning + "s matching " + master_name_edited
-        right_the_title = shorten_input(master_name_edited+" "+thetitle_beginning+"s ")
-        the_color = "#7bcd8a"
-
-        field_matching[0]['title'] = add_blank_space(left_the_title.title())+ str(field_matching[0]['title']).title()
-        field_matching[1]['title'] = add_blank_space(right_the_title.title())+ str(field_matching[1]['title']).title()
-        theattachment.append({'fields': field_matching, 'color': the_color})
-
-    return theattachment
+	return theattachment
 
 
 #plugin data array is empty
@@ -154,7 +155,6 @@ def no_elements_found(thetitle_beginning,message=None):
 
 #main output to slack function
 def slack_payload(data_array, eachteam):
-
     attachments = []
     logging.debug("printing data array in output_slack_payload")
     logging.debug(data_array)

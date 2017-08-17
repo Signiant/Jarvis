@@ -160,10 +160,6 @@ def s3_compare_master_team(m_array, tkey, team_name):
         for m_stuff in m_array[m_item]:
                 for t_item in tkey:
                     for t_stuff in tkey[t_item]:
-                        print "*************************"
-                        print str(m_item)+"/"+str(m_stuff)
-                        print t_item+"/"+str(t_stuff)
-                        print "*************************"
 
                         if m_stuff == t_stuff:
 
@@ -185,9 +181,7 @@ def s3_compare_master_team(m_array, tkey, team_name):
                                                     if t_system is not "filekey":
                                                         for the_t in t_file[t_system]:
 
-                                                            if "media-shuttle-standalone-linux-info" in m_system:
-                                                                print "cool"
-
+ 
                                                             if the_m["os"] == the_t["os"] and m_file['filekey'] == t_file['filekey']:
                                                                 amatch = compare_file_version(the_m,the_t)
 
@@ -239,16 +233,9 @@ def main_eb_check_versions(master_array, team_array):
     #get the team name associated with master data set
     team_name = get_team_name(master_array)
 
-    print "***************************************"
-    pprint.pprint(master_plugin_data)
-    print "***************************************"
-
     if master_plugin_data:
         team_plugin_data = get_s3_data(team_array)
 
-        print "***************************************"
-        pprint.pprint(team_plugin_data)
-        print "***************************************"
 
         for m_plugin_data in master_plugin_data:
             for t_plugin_data in team_plugin_data:

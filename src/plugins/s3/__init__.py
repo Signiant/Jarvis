@@ -111,6 +111,30 @@ def main(text):
 						ret = ret + str(bucket[u'Name']) + "\n"
 			return ret
 
+	if 'list' in text:
+		text.remove("list")
+		ret = ""
+		if 'buckets' in text:
+			try:
+				s3_buckets = s3.list_buckets()['Buckets']
+
+			except Exception as e:
+				print e
+				return "Could not list buckets in " + region
+
+			if len(s3_buckets) == 0:
+				return "There are no s3 buckets associated with this region: " + region
+
+			for bucket in s3_buckets:
+				for b in loadedbuckets[region]:
+					if bucket[u'Name'] == b['bucketname']:
+						ret = ret + str(bucket[u'Name']) + "\n"
+			return ret
+
+	if 'files' in text:
+		text.remove('files')
+		print text
+
 		if "filter" in text:
 			if len(text) == 3:
 				lookup = text[text.index("filter")+1]
@@ -148,35 +172,42 @@ def main(text):
 								  ret = ret + "\n\nobject: " + item[u'Key'] +"\nLast Modified: "+item[u'LastModified'].strftime('%m/%d/%Y %H:%M:%S')
 
 				  if one_bucket_search:
-					break
+					return ret
 
 				except Exception as e:
 					print e
 					return "Could not list buckets in " + region
-			else:
-				#all top directories will be returned in the buckets or bucket if specified
-				s3_dictionary = []
+		else:
+			#all top directories will be returned in the buckets or bucket if specified
+			s3_dictionary = []
 
-				for b in loadedbuckets[region]:
-					try:
-						paginator = s3.get_paginator('list_objects_v2')
-						if len(text) == 1:
-							page_iterator = paginator.paginate(Bucket=text[0])
-						else:
-							page_iterator = paginator.paginate(Bucket=b['bucketname'])
+			one_bucket_search = False
 
-						ret = ret + "\n\nBucket: " + str(b['bucketname']) + "\n"
+			for b in loadedbuckets[region]:
+				try:
+					paginator = s3.get_paginator('list_objects_v2')
+					if len(text) == 1:
+					  page_iterator = paginator.paginate(Bucket=text[0])
+					  ret = ret + "\n\nBucket: " + str(text[0])
+					  one_bucket_search = True
+					else:
+					  page_iterator = paginator.paginate(Bucket=b['bucketname'])
+					  ret = ret + "\n\nBucket: " + str(b['bucketname'])
 
-						for page in page_iterator:
-							for item in page['Contents']:
-								page_item = item[u'Key'].split('/')[0]
-								if page_item not in s3_dictionary:
-									ret = ret +"\n"+page_item
-									s3_dictionary.append(page_item)
 
-					except Exception as e:
-						print e
-						return "Could not list buckets in " + region
+					for page in page_iterator:
+						for item in page['Contents']:
+							page_item = item[u'Key'].split('/')[0]
+							if page_item not in s3_dictionary:
+								ret = ret +"\n"+page_item
+								s3_dictionary.append(page_item)
+
+					if one_bucket_search:
+					  return ret
+
+				except Exception as e:
+					print e
+					return "Could not list buckets in " + region
 
 		return ret
 

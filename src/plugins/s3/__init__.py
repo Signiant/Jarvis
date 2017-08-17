@@ -213,7 +213,7 @@ def main(text):
 
 						compared_data = s3_compares.main_eb_check_versions(master_data, team_data)
 
-						return compare_output.slack_payload(compared_data)
+						return compare_output.slack_payload(compared_data, get_team_name(team_data))
 
 
 					else:

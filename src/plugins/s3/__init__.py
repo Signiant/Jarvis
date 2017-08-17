@@ -266,7 +266,7 @@ def information():
 	return """This plugin returns various information about clusters and services hosted on s3.
 	The format of queries is as follows:
 	jarvis s3 list buckets <in region/account> [sendto <user or channel>]
-	jarvis s3 list files <bucket> <in region/account> [sendto <user or channel>]
+	jarvis s3 list files [<bucket>] <in region/account> [sendto <user or channel>]
 	jarvis s3 compare [<bucket>] within <region> <account> with [<bucket>] within <account>  [sendto <user or channel>]"""
 
 

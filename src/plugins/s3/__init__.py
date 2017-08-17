@@ -27,7 +27,7 @@ def extract_from_text(text):
 
 ###################################################################
 
-def main(text, config):
+def main(text):
 	regionList = ['us-east-1', 'us-west-1', 'us-west-2', 'eu-west-1', 'ap-northeast-1', 'ap-southeast-2']
 	region = regionList[0]
 
@@ -123,32 +123,32 @@ def main(text, config):
 					return "Filter is missing lookup directories"
 
 				for b in loadedbuckets[region]:
-					#try:
-					paginator = s3.get_paginator('list_objects_v2')
-					if len(text) == 1:
-						page_iterator = paginator.paginate(Bucket=text[0])
-					else:
-						page_iterator = paginator.paginate(Bucket=b['bucketname'])
+					try:
+						paginator = s3.get_paginator('list_objects_v2')
+						if len(text) == 1:
+							page_iterator = paginator.paginate(Bucket=text[0])
+						else:
+							page_iterator = paginator.paginate(Bucket=b['bucketname'])
 
-					ret = ret + "\n\nBucket: " + str(b['bucketname'])
+						ret = ret + "\n\nBucket: " + str(b['bucketname'])
 
-					for page in page_iterator:
-						for item in page['Contents']:
-							page_item = filter(None,item[u'Key'].split('/'))
-							lookup_array = filter(None,lookup.split('/'))
+						for page in page_iterator:
+							for item in page['Contents']:
+								page_item = filter(None,item[u'Key'].split('/'))
+								lookup_array = filter(None,lookup.split('/'))
 
-							if len(page_item) == len(lookup_array)+1:
-								l_iterator = 0
-								check_match = 0
-								while l_iterator < len(lookup_array):
-									if page_item[l_iterator] == lookup_array[l_iterator]:
-										check_match = check_match + 1
-									l_iterator = l_iterator + 1
-								if check_match == len(lookup_array):
-									ret = ret + "\n\nobject: " + item[u'Key'] +"\nLast Modified: "+item[u'LastModified'].strftime('%m/%d/%Y %H:%M:%S')
-					#except Exception as e:
-					#	print e
-					#	return "Could not list buckets in " + region
+								if len(page_item) == len(lookup_array)+1:
+									l_iterator = 0
+									check_match = 0
+									while l_iterator < len(lookup_array):
+										if page_item[l_iterator] == lookup_array[l_iterator]:
+											check_match = check_match + 1
+										l_iterator = l_iterator + 1
+									if check_match == len(lookup_array):
+										ret = ret + "\n\nobject: " + item[u'Key'] +"\nLast Modified: "+item[u'LastModified'].strftime('%m/%d/%Y %H:%M:%S')
+					except Exception as e:
+						print e
+						return "Could not list buckets in " + region
 			else:
 				#all top directories will be returned in the buckets or bucket if specified
 				s3_dictionary = []

@@ -144,9 +144,9 @@ The second method is by returning a Slack attachment object. The syntax is as fo
 
 More information on the syntax of attachments can be found at: https://api.slack.com/docs/attachments
 
-## Configuring aws.config for the EB and ECS plugins
+## Configuring aws.config for the EB, ECS and s3 plugins
 
-The EB and ECS plugins make use of an aws.config file to assume roles in different accounts. The syntax of the config file is as follows:
+The EB, ECS and s3 plugins make use of an aws.config file to assume roles in different accounts. The syntax of the config file is as follows:
 
 Note: We use a BlueGreen Deployment release technique on Elastic Beanstalk. In order to find out which is the `live` environment, the config file contains an `Applications` section that contains the Application Name, Hosted Zone ID, and DNS Record to figure out which environment is the `live` environment by looking at which load balancer the Route53 record set is pointing to.
 

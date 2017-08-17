@@ -182,11 +182,15 @@ def s3_compare_master_team(m_array, tkey, team_name):
                                                             if the_m["os"] == the_t["os"] and m_file['filekey'] == t_file['filekey']:
                                                                 amatch = compare_file_version(the_m,the_t)
 
-                                                                current_m_file_name = "\n\n"+str(m_system).split(".")[0] +"\n"+str(the_m['version'])
+
+
                                                                 current_t_file_name = "\n\n"+str(t_system).split(".")[0] +"\n"+ str(the_t['version'])
 
                                                                 if amatch == 2:
                                                                     amatch_status = False
+                                                                    current_m_file_name = "\n\n" + str(m_system).split(".")[0] + "\n" + str(the_m['version']+"  x")
+                                                                else:
+                                                                    current_m_file_name = "\n\n" + str(m_system).split(".")[0] + "\n" + str(the_m['version'])
 
                                                                 if len(master_ver) > 0 and len(team_ver) > 0:
                                                                     if current_m_file_name not in master_ver and current_m_file_name not in team_ver:

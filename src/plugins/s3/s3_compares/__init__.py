@@ -22,7 +22,6 @@ def read_s3_data(my_bucket, my_key, role_arn):
     os_name = None
 
     try:
-
         mysession = get_new_boto_session(role_arn)
 
         s3 = mysession.resource('s3')
@@ -79,7 +78,6 @@ def get_s3_data(the_array):
     temp_dir = []
     page_iterator = None
 
-
     if the_array['RoleArn']:
         mysession = get_new_boto_session(the_array['RoleArn'])
     else:
@@ -96,7 +94,6 @@ def get_s3_data(the_array):
                 page_contents = page['Contents']
 
                 for directory in bucket['Directories']:
-
                     lookup_directory = filter(None, directory['Directory'].split('/'))
 
                     if directory['compare_type'] == 'check_xml':
@@ -245,8 +242,6 @@ def main_eb_check_versions(master_array, team_array):
                         compared_data = compared_data + s3_compare_result
                     else:
                         compared_data = s3_compare_result
-
-    pprint.pprint(compared_data)
 
     return {'s3 Artifact': compared_data}
 

@@ -9,6 +9,8 @@ import pprint
 import os
 import logging
 import sys
+import compare_output
+import common
 
 # append path of ecs_compares module to sys.path
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -211,7 +213,7 @@ def main(text, config):
 
 						compared_data = s3_compares.main_eb_check_versions(master_data, team_data)
 
-						return s3_compares.slack_payload(compared_data)
+						return compare_output.slack_payload(compared_data)
 
 
 					else:

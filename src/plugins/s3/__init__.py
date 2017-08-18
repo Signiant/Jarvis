@@ -12,7 +12,7 @@ import sys
 import compare_output
 import common
 
-# append path of ecs_compares module to sys.path
+# append path of s3_compares module to sys.path
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path)
 import s3_compares
@@ -48,6 +48,8 @@ def main(text):
 	if text[0] == 'help':
 		return information()
 
+	#This function checks text if it contains one of the commands that should not extract region and account from,
+	# for example if user enters the compare command then this process is bypassed
 	if extract_from_text(text):
 		if 'in' in text:
 			while text[-1] != 'in':
@@ -58,7 +60,7 @@ def main(text):
 				tokens.remove(region)
 			text.remove('in')
 
-
+		#default loading of bucket values 
 		config = None
 		if os.path.isfile("./aws.config"):
 			with open("aws.config") as f:
@@ -67,7 +69,9 @@ def main(text):
 					for account in config['s3']['Accounts']:
 						if account["RoleArn"] == "" and account["AccountName"] == "":
 							loadedbuckets = account["Buckets"]
-
+							
+		#this will look at the command to see if it contains an account that is different and set the 
+		# the_account, the_role, loadedbuckets 
 		if len(tokens) > 0 and config != None:
 			for account in config['s3']['Accounts']:
 				if account['AccountName'] in tokens:
@@ -91,25 +95,7 @@ def main(text):
 										aws_session_token=awsSessionToken)
 		s3 = session.client("s3")
 
-	if 'list' in text:
-		text.remove("list")
-		ret = ""
-		if 'buckets' in text:
-			try:
-				s3_buckets = s3.list_buckets()['Buckets']
 
-			except Exception as e:
-				print e
-				return "Could not list buckets in " + region
-
-			if len(s3_buckets) == 0:
-				return "There are no s3 buckets associated with this region: " + region
-
-			for bucket in s3_buckets:
-				for b in loadedbuckets[region]:
-					if bucket[u'Name'] == b['bucketname']:
-						ret = ret + str(bucket[u'Name']) + "\n"
-			return ret
 
 	if 'list' in text:
 		text.remove("list")
@@ -124,92 +110,93 @@ def main(text):
 
 			if len(s3_buckets) == 0:
 				return "There are no s3 buckets associated with this region: " + region
-
+			
+			#create list of buckets to output to slack
 			for bucket in s3_buckets:
 				for b in loadedbuckets[region]:
 					if bucket[u'Name'] == b['bucketname']:
 						ret = ret + str(bucket[u'Name']) + "\n"
 			return ret
 
-	if 'files' in text:
-		text.remove('files')
-		print text
+		if 'files' in text:
+			text.remove('files')
+			print text
 
-		if "filter" in text:
-			if len(text) == 3:
-				lookup = text[text.index("filter")+1]
-				text.remove(text[text.index("filter")+1])
-				text.remove('filter')
+			if "filter" in text:
+				if len(text) == 3:
+					lookup = text[text.index("filter")+1]
+					text.remove(text[text.index("filter")+1])
+					text.remove('filter')
+				else:
+					return "Filter is missing lookup directories"
+
+				one_bucket_search = False
+
+				for b in loadedbuckets[region]:
+					try:
+					  paginator = s3.get_paginator('list_objects_v2')
+					  if len(text) == 1:
+						  page_iterator = paginator.paginate(Bucket=text[0])
+						  ret = ret + "\n\nBucket: " + str(text[0])
+						  one_bucket_search = True
+					  else:
+						  page_iterator = paginator.paginate(Bucket=b['bucketname'])
+						  ret = ret + "\n\nBucket: " + str(b['bucketname'])
+
+					  for page in page_iterator:
+						  for item in page['Contents']:
+							  page_item = filter(None,item[u'Key'].split('/'))
+							  lookup_array = filter(None,lookup.split('/'))
+
+							  if len(page_item) == len(lookup_array)+1:
+								  l_iterator = 0
+								  check_match = 0
+								  while l_iterator < len(lookup_array):
+									  if page_item[l_iterator] == lookup_array[l_iterator]:
+										  check_match = check_match + 1
+									  l_iterator = l_iterator + 1
+								  if check_match == len(lookup_array):
+									  ret = ret + "\n\nobject: " + item[u'Key'] +"\nLast Modified: "+item[u'LastModified'].strftime('%m/%d/%Y %H:%M:%S')
+					  #if user requested one bucket specifically than return data for the one bucket  
+					  if one_bucket_search:
+						return ret
+
+					except Exception as e:
+						print e
+						return "Could not list buckets in " + region
 			else:
-				return "Filter is missing lookup directories"
+				#all top directories will be returned in the buckets or bucket if specified
+				s3_dictionary = []
 
-			one_bucket_search = False
+				one_bucket_search = False
 
-			for b in loadedbuckets[region]:
-				try:
-				  paginator = s3.get_paginator('list_objects_v2')
-				  if len(text) == 1:
-					  page_iterator = paginator.paginate(Bucket=text[0])
-					  ret = ret + "\n\nBucket: " + str(text[0])
-					  one_bucket_search = True
-				  else:
-					  page_iterator = paginator.paginate(Bucket=b['bucketname'])
-					  ret = ret + "\n\nBucket: " + str(b['bucketname'])
-
-				  for page in page_iterator:
-					  for item in page['Contents']:
-						  page_item = filter(None,item[u'Key'].split('/'))
-						  lookup_array = filter(None,lookup.split('/'))
-
-						  if len(page_item) == len(lookup_array)+1:
-							  l_iterator = 0
-							  check_match = 0
-							  while l_iterator < len(lookup_array):
-								  if page_item[l_iterator] == lookup_array[l_iterator]:
-									  check_match = check_match + 1
-								  l_iterator = l_iterator + 1
-							  if check_match == len(lookup_array):
-								  ret = ret + "\n\nobject: " + item[u'Key'] +"\nLast Modified: "+item[u'LastModified'].strftime('%m/%d/%Y %H:%M:%S')
-
-				  if one_bucket_search:
-					return ret
-
-				except Exception as e:
-					print e
-					return "Could not list buckets in " + region
-		else:
-			#all top directories will be returned in the buckets or bucket if specified
-			s3_dictionary = []
-
-			one_bucket_search = False
-
-			for b in loadedbuckets[region]:
-				try:
-					paginator = s3.get_paginator('list_objects_v2')
-					if len(text) == 1:
-					  page_iterator = paginator.paginate(Bucket=text[0])
-					  ret = ret + "\n\nBucket: " + str(text[0])
-					  one_bucket_search = True
-					else:
-					  page_iterator = paginator.paginate(Bucket=b['bucketname'])
-					  ret = ret + "\n\nBucket: " + str(b['bucketname'])
+				for b in loadedbuckets[region]:
+					try:
+						paginator = s3.get_paginator('list_objects_v2')
+						if len(text) == 1:
+						  page_iterator = paginator.paginate(Bucket=text[0])
+						  ret = ret + "\n\nBucket: " + str(text[0])
+						  one_bucket_search = True
+						else:
+						  page_iterator = paginator.paginate(Bucket=b['bucketname'])
+						  ret = ret + "\n\nBucket: " + str(b['bucketname'])
 
 
-					for page in page_iterator:
-						for item in page['Contents']:
-							page_item = item[u'Key'].split('/')[0]
-							if page_item not in s3_dictionary:
-								ret = ret +"\n"+page_item
-								s3_dictionary.append(page_item)
+						for page in page_iterator:
+							for item in page['Contents']:
+								page_item = item[u'Key'].split('/')[0]
+								if page_item not in s3_dictionary:
+									ret = ret +"\n"+page_item
+									s3_dictionary.append(page_item)
 
-					if one_bucket_search:
-					  return ret
+						if one_bucket_search:
+						  return ret
 
-				except Exception as e:
-					print e
-					return "Could not list buckets in " + region
+					except Exception as e:
+						print e
+						return "Could not list buckets in " + region
 
-		return ret
+			return ret
 
 	elif 'compare' in text:
 
@@ -233,19 +220,14 @@ def main(text):
 							config = json.load(f)
 
 					if config:
-
 						master_data = get_in_s3_compare_data(config, master_args, master_args_eval)
-
 						team_data = get_in_s3_compare_data(config, team_args, team_args_eval)
 
 					else:
-
 						return "Config file was not loaded"
 
 					if master_data and team_data:
-
 						compared_data = s3_compares.main_eb_check_versions(master_data, team_data)
-
 						return compare_output.slack_payload(compared_data, get_team_name(team_data))
 
 
@@ -272,11 +254,13 @@ def information():
 
 def eval_args(args, regionList):
 	args = filter(None, args)
+	#this indicates user did not specify a bucket
 	if len(args) == 3:
 		if args.index("within") == 0 and args[1] in regionList:
 			return 1
 		else:
 			return 0
+	#this indicates user specified a bucket
 	elif len(args) == 4:
 		if args.index("within") == 1 and args[2] in regionList:
 			return 2
@@ -352,6 +336,7 @@ def get_in_s3_compare_data(config, args, args_eval):
 		  if account['Buckets']:
 			  for region in account['Buckets']:
 				  if region == result['region']:
+					  #the user specified a bucket than search just in that bucket
 					  if result.has_key('Bucket'):
 						  result['Directory_List'] = get_data_for_specific_bucket(account['Buckets'][region], result['Bucket'])
 					  else:

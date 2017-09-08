@@ -229,9 +229,9 @@ def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
     for things in m_array:
         not_in_team_array.append(things)
 
+    amatch = None
     for m_data in m_array:
         for t_array in tkey:
-            amatch = None
             logging.debug(t_array['regionname'] +" "+t_array['version'])
 
             team_dot_index = t_array['version'].find('.')

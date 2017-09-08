@@ -231,7 +231,7 @@ def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
 
     for m_data in m_array:
         for t_array in tkey:
-
+            amatch = None
             logging.debug(t_array['regionname'] +" "+t_array['version'])
 
             team_dot_index = t_array['version'].find('.')
@@ -244,7 +244,7 @@ def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
 
 
             if team_version_prefix == master_version_prefix:
-                
+
                 #remove matched applications from not_in_team_array
                 not_in_team_array.remove(m_data)
 
@@ -271,7 +271,7 @@ def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
                          "regionname":t_array['regionname'],
                          "pluginname": "eb"
                         })
-                
+
     #add all master applications not found to eb data output
     if not_in_team_array:
         for m_data in not_in_team_array:
@@ -311,5 +311,3 @@ def main_eb_check_versions(master_array, team_array, superjenkins_data, jenkins_
         compared_data = eb_compare_master_team(team_plugin_data, master_plugin_data, superjenkins_data, jenkins_build_tags)
 
     return compared_data
-
-

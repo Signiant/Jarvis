@@ -200,8 +200,6 @@ def get_build_url(cached_array, lookup_word, prelim_version, j_tags, match_num, 
     build_num = []
     build_detail = shorten_input(build_detail)
 
-    version_detail = shorten_input(prelim_version)
-
     for symb in symbols_array:
         if symb in prelim_version:
             build_num = prelim_version.split(symb)

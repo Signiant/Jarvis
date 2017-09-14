@@ -56,10 +56,10 @@ def eb_check_versions(region_name, env_array, role_arn, team_name):
                                 ('regionname'): region_name, ('team_name'):team_name}
 
                 if areas in c_app:
-                    logging.debug("MATCH: version label is %s app is %s environment is %s\n areas is %s checking app %s\n\n"%(
+                    print("MATCH: version label is %s app is %s environment is %s\n areas is %s checking app %s\n\n"%(
                         c_version,c_app,c_env, areas,c_app))
                 else:
-                    logging.debug("version label is %s app is %s environment is %s\n areas is %s checking app %s" % (
+                    print("version label is %s app is %s environment is %s\n areas is %s checking app %s" % (
                     c_version, c_app, c_env, areas, c_app))
 
                 # add the corresponding build name key term for each eb environment

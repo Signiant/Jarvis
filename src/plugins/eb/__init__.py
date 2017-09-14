@@ -224,6 +224,7 @@ def main(text):
 																		   superjenkins_data,
 																		   config["General"]["jenkins"][
 																			   "branch_equivalent_tags"])
+						print(compared_data)
 						#this uses compare_output
 						attachments = compare_output.slack_payload(compared_data, team_data['team_name'])
 

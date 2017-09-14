@@ -156,8 +156,8 @@ def no_elements_found(thetitle_beginning,message=None):
 #main output to slack function
 def slack_payload(data_array, eachteam):
     attachments = []
-    logging.debug("printing data array in output_slack_payload")
-    logging.debug(data_array)
+    print("printing data array in output_slack_payload")
+    print(data_array)
     if data_array:
         for theplugin in data_array:
             if data_array[theplugin]:
@@ -167,8 +167,8 @@ def slack_payload(data_array, eachteam):
     else:
         attachments = attachments + no_elements_found("Unable to Retrieve Data")
 
-    print("printing attachments")
-    print(attachments)
+    logging.debug("printing attachments")
+    logging.debug(attachments)
 
     return  attachments
 

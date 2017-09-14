@@ -293,7 +293,6 @@ def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
                             "pluginname": "eb"})
 
     compared_array.update({'eb env': eb_data})
-    print('compared_array: %s' % compared_array)
     return compared_array
 
 
@@ -311,8 +310,6 @@ def main_eb_check_versions(master_array, team_array, superjenkins_data, jenkins_
                                              team_array['RoleArn'],
                                              master_array['team_name'])
 
-        print('master plugin data: %s' % master_plugin_data)
-        print('team plugin data: %s' % team_plugin_data)
         compared_data = eb_compare_master_team(team_plugin_data, master_plugin_data, superjenkins_data, jenkins_build_tags)
 
     return compared_data

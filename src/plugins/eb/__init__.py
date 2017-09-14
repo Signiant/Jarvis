@@ -205,7 +205,9 @@ def main(text):
 
 				if config:
 					master_data = get_in_eb_compare_data(config, master_args, master_args_eval)
+					print(master_data)
 					team_data = get_in_eb_compare_data(config, team_args, team_args_eval)
+					print(team_data)
 				else:
 					return "Config file was not loaded"
 

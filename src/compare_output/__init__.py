@@ -167,8 +167,8 @@ def slack_payload(data_array, eachteam):
     else:
         attachments = attachments + no_elements_found("Unable to Retrieve Data")
 
-    print("printing attachments")
-    print(attachments)
+    logging.debug("printing attachments")
+    logging.debug(attachments)
 
     return  attachments
 

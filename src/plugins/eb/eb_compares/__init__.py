@@ -126,16 +126,15 @@ def compare_environment(team_env,master_env, j_tags):
     3 - branch
     """""
 
-    result = 0
+    # Assume branch, unless we find master
+    result = 3
 
-    if (j_tags[0] in master_env):
+    if ('master' in master_env):
         if team_env == master_env:
             result = 1
         else:
-            if (j_tags[0] in team_env):
+            if ('master' in team_env):
                 result = 2
-            else:
-                result = 3
 
     #print " MATCH IS: "+team_env +" == " + master_env+" ==> "+str(result)
 
@@ -201,8 +200,6 @@ def get_build_url(cached_array, lookup_word, prelim_version, j_tags, match_num, 
     build_num = []
     build_detail = shorten_input(build_detail)
 
-    version_detail = shorten_input(prelim_version)
-
     for symb in symbols_array:
         if symb in prelim_version:
             build_num = prelim_version.split(symb)
@@ -210,13 +207,13 @@ def get_build_url(cached_array, lookup_word, prelim_version, j_tags, match_num, 
 
     if match_num == 2 and ismaster:
         if len(build_num) > 1 and the_url:
-            final_url = str(the_url)+build_num[-1]+"/promotion/ | ver: "+str(version_detail)
+            final_url = str(the_url)+build_num[-1]+"/promotion/ | ver: "+str(prelim_version)
             final_url =  "build: "+ build_detail+"\n<"+final_url+ ">"
         else:
             # build url corresponding to service was not found
-            final_url = "build: "+ build_detail+"\nver: "+str(version_detail)
+            final_url = "build: "+ build_detail+"\nver: "+str(prelim_version)
     else:
-        final_url = "build: " + build_detail + "\nver: " + str(version_detail)
+        final_url = "build: " + build_detail + "\nver: " + str(prelim_version)
 
     return final_url
 

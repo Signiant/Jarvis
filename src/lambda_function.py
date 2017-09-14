@@ -51,6 +51,7 @@ def _formparams_to_dict(s1):
     return retval
 
 def lambda_handler(event, context):
+    print(event)
     if 'Records' in event:
         alert = event['Records'][0]['Sns']['Message']
         event['formparams'] = str(alert[len("{'formparams': '"):-2])

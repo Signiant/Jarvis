@@ -263,6 +263,7 @@ def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
                                                      amatch, ismaster=False)
 
 
+                print('master ver: %s, team ver: %s, Match %s' %(master_version_entry, team_version_entry, amatch))
                 eb_data.append({"master_env":m_data['environmentname'],
                          "master_version": master_version_entry,
                          "master_updateddate":m_data['dateupdated'],
@@ -282,6 +283,7 @@ def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
                                                  prelim_master_version, jenkins_build_tags,
                                                  amatch, ismaster=True)
 
+            print('master ver: %s, team ver: %s, Match %s' % (master_version_entry, "", "2"))
             eb_data.append({"master_env": m_data['environmentname'],
                             "master_version": master_version_entry,
                             "master_updateddate": m_data['dateupdated'],

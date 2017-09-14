@@ -156,8 +156,8 @@ def no_elements_found(thetitle_beginning,message=None):
 #main output to slack function
 def slack_payload(data_array, eachteam):
     attachments = []
-    print("printing data array in output_slack_payload")
-    print(data_array)
+    logging.debug("printing data array in output_slack_payload")
+    logging.debug(data_array)
     if data_array:
         for theplugin in data_array:
             if data_array[theplugin]:

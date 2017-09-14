@@ -56,10 +56,10 @@ def eb_check_versions(region_name, env_array, role_arn, team_name):
                                 ('regionname'): region_name, ('team_name'):team_name}
 
                 if areas in c_app:
-                    print("MATCH: version label is %s app is %s environment is %s\n areas is %s checking app %s\n\n"%(
+                    logging.debug("MATCH: version label is %s app is %s environment is %s\n areas is %s checking app %s\n\n"%(
                         c_version,c_app,c_env, areas,c_app))
                 else:
-                    print("version label is %s app is %s environment is %s\n areas is %s checking app %s" % (
+                    logging.debug("version label is %s app is %s environment is %s\n areas is %s checking app %s" % (
                     c_version, c_app, c_env, areas, c_app))
 
                 # add the corresponding build name key term for each eb environment
@@ -293,6 +293,7 @@ def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
                             "pluginname": "eb"})
 
     compared_array.update({'eb env': eb_data})
+    print('compared_array: %s' % compared_array)
     return compared_array
 
 
@@ -310,6 +311,8 @@ def main_eb_check_versions(master_array, team_array, superjenkins_data, jenkins_
                                              team_array['RoleArn'],
                                              master_array['team_name'])
 
+        print('master plugin data: %s' % master_plugin_data)
+        print('team plugin data: %s' % team_plugin_data)
         compared_data = eb_compare_master_team(team_plugin_data, master_plugin_data, superjenkins_data, jenkins_build_tags)
 
     return compared_data

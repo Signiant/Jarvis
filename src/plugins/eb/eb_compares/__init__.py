@@ -201,6 +201,8 @@ def get_build_url(cached_array, lookup_word, prelim_version, j_tags, match_num, 
     build_num = []
     build_detail = shorten_input(build_detail)
 
+    version_detail = shorten_input(prelim_version)
+
     for symb in symbols_array:
         if symb in prelim_version:
             build_num = prelim_version.split(symb)
@@ -208,13 +210,13 @@ def get_build_url(cached_array, lookup_word, prelim_version, j_tags, match_num, 
 
     if match_num == 2 and ismaster:
         if len(build_num) > 1 and the_url:
-            final_url = str(the_url)+build_num[-1]+"/promotion/ | ver: "+str(prelim_version)
+            final_url = str(the_url)+build_num[-1]+"/promotion/ | ver: "+str(version_detail)
             final_url =  "build: "+ build_detail+"\n<"+final_url+ ">"
         else:
             # build url corresponding to service was not found
-            final_url = "build: "+ build_detail+"\nver: "+str(prelim_version)
+            final_url = "build: "+ build_detail+"\nver: "+str(version_detail)
     else:
-        final_url = "build: " + build_detail + "\nver: " + str(prelim_version)
+        final_url = "build: " + build_detail + "\nver: " + str(version_detail)
 
     return final_url
 

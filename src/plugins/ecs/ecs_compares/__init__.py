@@ -191,7 +191,7 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
         for m_data in m_array[eachmaster]:
 
             for t_array in tkey:
-                if t_array['servicename'] == m_data['servicename']:
+                if t_array['servicename'].replace("_", "-") == m_data['servicename'].replace("_", "-"):
 
                     logging.debug("Printing comparison of service_definition")
                     logging.debug(t_array['service_definition'] + " == " + m_data['service_definition'])
@@ -260,6 +260,7 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
                                                  "slackchannel": t_array['slackchannel'],
                                                  "pluginname": "ecs"
                                                  })
+                    break
 
     # add all master services not found to ecs data output
     if not_in_team_array:

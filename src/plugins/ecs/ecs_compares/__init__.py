@@ -215,7 +215,7 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
                         if the_team_service_name and the_master_service_name:
                             logging.debug(the_team_service_name[0] + " == " + the_master_service_name[0] + "\n\n")
 
-                            if the_team_service_name[0] == the_master_service_name[0]:
+                            if the_team_service_name[0].replace("_", "-") == the_master_service_name[0].replace("_", "-"):
                                 if m_data in not_in_team_array:
                                     not_in_team_array.remove(m_data)
 

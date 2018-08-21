@@ -19,6 +19,7 @@ with open(os.path.join(os.path.dirname(__file__), 'SLACK_TEAM_TOKEN')) as f:
 slack_channel = '#general'
 slack_response_url = None
 query = None
+
 def getAllPlugins():
     plugins = []
     possibleplugins = os.listdir(pluginFolder)
@@ -51,7 +52,7 @@ def _formparams_to_dict(s1):
     return retval
 
 def lambda_handler(event, context):
-    print(event)
+    print("Received event: " + json.dumps(event, indent=2))
     if 'Records' in event:
         alert = event['Records'][0]['Sns']['Message']
         event['formparams'] = str(alert[len("{'formparams': '"):-2])
@@ -224,10 +225,3 @@ def send_to_slack(val, sendto_slack_channel, sender_address):
 
         except Exception as e:
             print "sendto_message_request error "+str(e)
-
-
-
-
-
-
-

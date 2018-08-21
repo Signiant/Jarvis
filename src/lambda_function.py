@@ -105,9 +105,9 @@ def lambda_handler(event, context):
             print 'Error: ' + format(str(e))
 
 
-    logging.info("******************return value of slack payload*********************")
-    logging.info(retval)
-    logging.info("*********************************************************************")
+    print("******************return value of slack payload*********************")
+    print(retval)
+    print("*********************************************************************")
 
     #if sendto: is in args then send jarvis message to slack channel in args
     if sendto_data:
@@ -225,3 +225,9 @@ def send_to_slack(val, sendto_slack_channel, sender_address):
 
         except Exception as e:
             print "sendto_message_request error "+str(e)
+
+if __name__ == '__main__':
+    context = None
+    with open(os.path.join(os.path.dirname(__file__), 'test_event.json')) as f:
+        event = json.loads(f.read().strip())
+    lambda_handler(event, context)

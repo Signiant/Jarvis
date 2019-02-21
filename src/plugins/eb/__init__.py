@@ -88,7 +88,7 @@ def main(text):
 			try:
 				applications = eb.describe_applications()['Applications']
 			except Exception as e:
-				print e
+				print(e)
 				return "Could not describe applications in " + region
 			if len(applications) == 0:
 				return "There are no beanstalk applications in this region: " + region
@@ -112,7 +112,7 @@ def main(text):
 						environments.append(env)
 
 			except Exception as e:
-				print e
+				print(e)
 				return "Application " + application + " was not found in region " + region
 
 			if len(environments) == 0:
@@ -127,7 +127,7 @@ def main(text):
 						try:
 							if app.get('Account'):
 								for account in config['Accounts']:
-									print "Looping"
+									print("Looping")
 									if account['AccountName'] == app['Account']:
 										sts_client = boto3.client('sts')
 										assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'],
@@ -247,7 +247,7 @@ def main(text):
 			try:
 				environments = eb.describe_environments(ApplicationName=application)['Environments']
 			except Exception as e:
-				print e
+				print(e)
 				return "Could not describe " + " ".join(text) + " in " + region
 			if len(environments) == 0:
 				return "There are no beanstalk environments in this application: " + " ".join(text)
@@ -260,7 +260,7 @@ def main(text):
 						try:
 							if app.get('Account'):
 								for account in config['Accounts']:
-									print "Looping"
+									print("Looping")
 									if account['AccountName'] == app['Account']:
 										sts_client = boto3.client('sts')
 										assumedRole = sts_client.assume_role(RoleArn=account['RoleArn'],
@@ -326,8 +326,8 @@ def main(text):
 			graphType = None
 			if 'graph' in text:
 				graph = True
-				print len(text)
-				print text.index('graph')
+				print(len(text))
+				print(text.index('graph'))
 				if len(text) > text.index('graph') + 1:
 					graphType = text[text.index('graph') + 1]
 
@@ -336,7 +336,7 @@ def main(text):
 			try:
 				description = eb.describe_environments(EnvironmentNames=[environment])['Environments'][0]
 			except Exception as e:
-				print e
+				print(e)
 				return "Environment " + environment + " was not found in region " + region
 
 			events = eb.describe_events(EnvironmentName=environment,
@@ -453,7 +453,7 @@ def main(text):
 		try:
 			resources = eb.describe_environment_resources(EnvironmentName=environment)['EnvironmentResources']
 		except Exception as e:
-			print e
+			print(e)
 			return "Environment " + environment + " was not found in region " + region
 
 		autoscalerName = resources['AutoScalingGroups'][0]['Name']
@@ -481,7 +481,7 @@ def main(text):
 				MaxSize=maxInstances
 			)
 		except Exception as e:
-			print e
+			print(e)
 			return "Unable to unpause environment " + environment
 
 		return message

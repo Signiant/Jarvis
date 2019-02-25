@@ -192,12 +192,12 @@ def main(text):
 
 				return attachments
 			except Exception as e:
-				print e
+				print(e)
 				return "Cluster " + text[0] + " was not found in region " + region
 
 	elif 'compare' in text:
 		text.remove("compare")
-		
+
 		if "with" in text and len(filter(None, text)) > 6 and len(filter(None, text)) < 10:
 
 			#extract arguments from text for master and team ecs data
@@ -360,7 +360,7 @@ def main(text):
 			try:
 				services = ecs.list_services(cluster=text[1])['serviceArns']
 			except Exception as e:
-				print e
+				print(e)
 				return "Cluster " + text[1] + " was not found in region " + region
 
 			for service in services:
@@ -370,7 +370,7 @@ def main(text):
 					try:
 						services_desc = ecs.describe_services(cluster=text[1],services=[service])
 					except Exception as e:
-						print e
+						print(e)
 						return "Cluster " + text[0] + " was not found in region " + region
 					for service in services_desc['services']:
 						image = ecs.describe_task_definition(taskDefinition=service['taskDefinition'])
@@ -505,7 +505,7 @@ def parse_tasks(task_list, lookup_term, plugin):
 		try:
 			image = plugin.describe_task_definition(taskDefinition=family)
 		except Exception as e:
-			print "Error could not retrieve image "+str(e)
+			print("Error could not retrieve image "+str(e))
 			image = []
 		if image:
 			version_name = image['taskDefinition']['containerDefinitions'][0]['image'].split('/')[-1].split(':')[-1]

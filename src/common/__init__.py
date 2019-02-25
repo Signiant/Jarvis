@@ -64,11 +64,10 @@ def get_superjenkins_data(beginning_script_tag, ending_script_tag, superjenkins_
 
 			logging.info("Superjenkins data retrieved and json loaded")
 
-		except Exception, e:
-			print "Error in retrieving and creating json from s3 superjenkins_key ==> " + str(e)
+		except Exception as e:
+			print("Error in retrieving and creating json from s3 superjenkins_key ==> " + str(e))
 
-
-	if cached_array == None and superjenkins_link:
+	if cached_array is None and superjenkins_link:
 		try:
 			returned_data = requests.get(superjenkins_link)
 			returned_data_iterator = returned_data.iter_lines()
@@ -81,7 +80,7 @@ def get_superjenkins_data(beginning_script_tag, ending_script_tag, superjenkins_
 			for items in json.loads(cached_items):
 				cached_array = json.loads(cached_items)[items]
 
-		except Exception, e:
-			print "Error in retrieving and creating json from superjenkins ==> " + str(e)
+		except Exception as e:
+			print("Error in retrieving and creating json from superjenkins ==> " + str(e))
 
 	return cached_array

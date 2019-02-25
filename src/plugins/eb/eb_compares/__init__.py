@@ -5,7 +5,7 @@ import logging
 appversions = []
 
 def log (message):
-    print id() + ": " + message
+    print(id() + ": " + message)
 
 def id():
     return "eb"
@@ -83,7 +83,7 @@ def eb_check_versions(region_name, env_array, role_arn, team_name):
                         activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
 
                     except Exception as e:
-                        print "Route53 call error "+str(e)
+                        print("Route53 call error "+str(e))
 
                     if activeLoadBalancer:
                         if env['EndpointURL'].lower() in activeLoadBalancer.lower() and env['Health'] == "Green":

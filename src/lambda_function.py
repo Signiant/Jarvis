@@ -101,7 +101,7 @@ def lambda_handler(event, context):
             plugin = loadPlugin(text[0])
             retval = plugin.main(text)
         except Exception as e:
-            retval = "I'm afraid I did not understand that command. Use 'jarvis help' for available commands." + format(str(e))
+            retval = "I'm afraid I did not understand that command. Use 'jarvis help' for available commands."
             print('Error: ' + format(str(e)))
 
 

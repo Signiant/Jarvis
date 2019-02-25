@@ -7,7 +7,7 @@ appversions = []
 
 
 def log(message):
-    print id() + ": " + message
+    print(id() + ": " + message)
 
 def id():
     return "s3"
@@ -48,8 +48,8 @@ def read_s3_data(my_bucket, my_key, role_arn):
             #Holds the previous item tag that contains the os name
             previous_item_tag = item.tag
 
-    except Exception, e:
-        print "Error in retrieving and creating json from s3 ==> " + str(e)
+    except Exception as e:
+        print("Error in retrieving and creating json from s3 ==> " + str(e))
 
     return result
 
@@ -138,8 +138,8 @@ def get_s3_data(the_array):
                 store_bucket_result.append({bucket['bucketname']: store_result})
                 store_result = dict()
 
-        except Exception, e:
-            print "Error in doing call for bucket " + str(e)
+        except Exception as e:
+            print("Error in doing call for bucket " + str(e))
     return store_bucket_result
 
 #compare the file versions

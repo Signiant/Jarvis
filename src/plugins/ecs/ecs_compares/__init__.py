@@ -150,36 +150,47 @@ def build_compare_words(lookup, compareto, jenkin_build_terms):
     return result
 
 
-def get_build_url(cached_array, lookup_word, prelim_version, jenkins_tags):
+def get_build_url(cached_array, lookup_word, service_definition, service_version,  jenkins_tags):
     """
     compare the service name to links in the superjenkins_data
     set the build_url when a url contains words matching the lookup service name
-    :param cached_array:
-    :param lookup_word:
-    :param prelim_version:
-    :param jenkins_tags:
+    :param cached_array: all the data from super jenkin
+    :param lookup_word: the service keywords a string such as "telemeoldtry_service"
+    :param service_definition: get service defnitio to find the stack name
+    :param service_version: the version string in the format of "master-8"
+    :param jenkins_tags: a list in the format [u'master', u'trunk', u'build']
     :return:
     """
-    the_url = None
+    the_url = ""
 
-    for the_names in cached_array:
-        if build_compare_words(lookup_word, the_names['name'], jenkins_tags):
-            the_url = the_names['url']
-    symbols_array = [".", "_", "-"]
-    build_num = []
-    # extract the build number from version
-    for symb in symbols_array:
-        if symb in prelim_version:
-            build_num = prelim_version.split(symb)
-            break
+    service_stack_name = service_definition.split('-Task-')[0]
+    cloudformation = boto3.resource('cloudformation')
+    stack = cloudformation.Stack(service_stack_name)
+    print("hi",stack.tags)
+    for tag in stack.tags:
+        if tag['Key'] == 'jenkins-build-url':
+            the_url = tag['Value']
+
+    # backward compatible to use previous way to get the jenkin build url
+    if not the_url:
+        for the_names in cached_array:
+            if build_compare_words(lookup_word, the_names['name'], jenkins_tags):
+                the_url = the_names['url']
+        symbols_array = [".", "_", "-"]
+        build_num = []
+        # extract the build number from version
+        for symb in symbols_array:
+            if symb in service_version:
+                build_num = service_version.split(symb)
+                break
 
     # build up url for slack display
-    if len(build_num) > 1 and the_url:
-        final_url = str(the_url) + build_num[-1] + "/promotion/ | ver: " + str(prelim_version)
+    if the_url:
+        final_url = str(the_url) + " | ver: " + str(service_version)
         final_url = "<" + final_url + ">"
     else:
         # build url corresponding to service was not found
-        final_url = "ver: " + str(prelim_version)
+        final_url = "ver: " + str(service_version)
 
     return final_url
 
@@ -203,7 +214,7 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
     compare master to teams
     :param tkey:
     :param m_array:
-    :param cached_array:
+    :param cached_array: jenkin_data from superjenkin
     :param jenkins_build_tags:
     :param excluded_services:
     :return:
@@ -259,12 +270,10 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
                                 #   and not a dev branch get the build
                                 if amatch == 2:
                                     if len(the_master_service_name) == 2:
-                                        ecs_master_version_entry = get_build_url(cached_array,
-                                                                                 the_master_service_name[1],
+                                        ecs_master_version_entry = get_build_url(cached_array, the_master_service_name[1], m_data['service_definition'],
                                                                                  m_data['version'], jenkins_build_tags)
                                     elif len(the_master_service_name) == 1:
-                                        ecs_master_version_entry = get_build_url(cached_array,
-                                                                                 the_master_service_name[0],
+                                        ecs_master_version_entry = get_build_url(cached_array, the_master_service_name[0], m_data['service_definition'],
                                                                                  m_data['version'], jenkins_build_tags)
                                 else:
                                     ecs_master_version_entry = "ver: " + m_data['version']
@@ -312,16 +321,13 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
                     #   and not a dev branch get the build
 
                     if len(the_master_service_name) == 2:
-                        ecs_master_version_entry = get_build_url(cached_array,
-                                                                 the_master_service_name[1],
+                        ecs_master_version_entry = get_build_url(cached_array, the_master_service_name[1], m_data['service_definition'],
                                                                  m_data['version'],
                                                                  jenkins_build_tags)
                     elif len(the_master_service_name) == 1:
-                        ecs_master_version_entry = get_build_url(cached_array,
-                                                                 the_master_service_name[0],
+                        ecs_master_version_entry = get_build_url(cached_array, the_master_service_name[0], m_data['service_definition'],
                                                                  m_data['version'],
                                                                  jenkins_build_tags)
-
                     ecs_data.append({"master_env": the_master_service_name[0],
                                      "master_version": ecs_master_version_entry,
                                      "master_updateddate": "",

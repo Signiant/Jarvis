@@ -197,7 +197,7 @@ def main(text):
 
 	elif 'compare' in text:
 		text.remove("compare")
-		
+
 		if "with" in text and len(filter(None, text)) > 6 and len(filter(None, text)) < 10:
 
 			#extract arguments from text for master and team ecs data

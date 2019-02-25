@@ -5,7 +5,7 @@ def id():
     return "output"
 
 def log(message):
-    print id() + ": " + message
+    print(id() + ": " + message)
 
 def get_themessage(value):
     if value == 1:

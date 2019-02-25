@@ -8,7 +8,7 @@ import json
 import datetime
 import pprint
 import json
-
+import traceback
 
 pluginFolder = "./plugins"
 mainFile = "__init__"
@@ -69,9 +69,9 @@ def lambda_handler(event, context):
     slack_response_url = param_map['response_url']
     slack_response_url = urllib.unquote(slack_response_url)
 
-    print "LOG: The request came from: " + slack_channel
-    print "LOG: The request is: " + str(text)
-    print "LOG: The requesting user is: " + param_map['user_name']
+    print("LOG: The request came from: " + slack_channel)
+    print("LOG: The request is: " + str(text))
+    print("LOG: The requesting user is: " + param_map['user_name'])
 
     #extract send to slack channel from args
     sendto_data = None
@@ -89,7 +89,7 @@ def lambda_handler(event, context):
                 retval = plugin.information()
             except Exception as e:
                 retval = "I'm afraid I did not understand that command. Use 'jarvis help' for available commands."
-                print 'Error: ' + format(str(e))
+                print('Error: ' + format(str(e)))
         else:
             plugins = ""
             for aPlugin in getAllPlugins():
@@ -102,7 +102,7 @@ def lambda_handler(event, context):
             retval = plugin.main(text)
         except Exception as e:
             retval = "I'm afraid I did not understand that command. Use 'jarvis help' for available commands."
-            print 'Error: ' + format(str(e))
+            print('Error: ' + format(str(e)))
 
 
     print("******************return value of slack payload*********************")
@@ -125,7 +125,7 @@ def send_message_to_slack(val):
         }
         r = requests.post(slack_response_url, json=payload)
     except Exception as e:
-        print "ephemeral_message_request error " + str(e)
+        print("ephemeral_message_request error " + str(e))
 
 
 def post_to_slack(val):
@@ -161,7 +161,7 @@ def send_to_slack(val, sendto_slack_channel, sender_address):
             }
             r = requests.post(slack_response_url, json=payload)
         except Exception as e:
-            print "ephemeral_message_request error "+str(e)
+            print("ephemeral_message_request error "+str(e))
 
         try:
             #send to another slack channel
@@ -185,7 +185,7 @@ def send_to_slack(val, sendto_slack_channel, sender_address):
                     send_message_to_slack('Unable to execute sendto command, retry with a valid  user or channel')
 
         except Exception as e:
-            print "sendto_message_request error " + str(e)
+            print("sendto_message_request error " + str(e))
     else:
         try:
             payload = {
@@ -195,7 +195,7 @@ def send_to_slack(val, sendto_slack_channel, sender_address):
             }
             ephemeral_message_request = requests.post(slack_response_url, json=payload)
         except Exception as e:
-            print "ephemeral_message_request error "+str(e)
+            print("ephemeral_message_request error "+str(e))
 
         # after sending a message to your currenet channel,
         #  then send another to the desired slack channel
@@ -224,7 +224,7 @@ def send_to_slack(val, sendto_slack_channel, sender_address):
                     send_message_to_slack('Unable to execute sendto command, retry with a valid user or channel')
 
         except Exception as e:
-            print "sendto_message_request error "+str(e)
+            print("sendto_message_request error "+str(e))
 
 if __name__ == '__main__':
     context = None

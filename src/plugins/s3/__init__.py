@@ -105,7 +105,7 @@ def main(text):
 				s3_buckets = s3.list_buckets()['Buckets']
 
 			except Exception as e:
-				print e
+				print(e)
 				return "Could not list buckets in " + region
 
 			if len(s3_buckets) == 0:
@@ -120,7 +120,7 @@ def main(text):
 
 		if 'files' in text:
 			text.remove('files')
-			print text
+			print(text)
 
 			if "filter" in text:
 				if len(text) == 3:
@@ -162,7 +162,7 @@ def main(text):
 						return ret
 
 					except Exception as e:
-						print e
+						print(e)
 						return "Could not list buckets in " + region
 			else:
 				#all top directories will be returned in the buckets or bucket if specified
@@ -193,14 +193,14 @@ def main(text):
 						  return ret
 
 					except Exception as e:
-						print e
+						print(e)
 						return "Could not list buckets in " + region
 
 			return ret
 
 	elif 'compare' in text:
 
-			print text
+			print(text)
 			text.remove("compare")
 
 			if "with" in text and (len(filter(None, text)) == 9 or len(filter(None, text)) == 7):

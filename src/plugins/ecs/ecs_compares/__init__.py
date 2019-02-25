@@ -166,7 +166,7 @@ def get_build_url(cached_array, lookup_word, service_definition, service_version
     service_stack_name = service_definition.split('-Task-')[0]
     cloudformation = boto3.resource('cloudformation')
     stack = cloudformation.Stack(service_stack_name)
-    print("hi",stack.tags)
+
     for tag in stack.tags:
         if tag['Key'] == 'jenkins-build-url':
             the_url = tag['Value']

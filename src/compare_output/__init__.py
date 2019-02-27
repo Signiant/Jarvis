@@ -136,7 +136,6 @@ def create_plugin_format(thedata, thetitle_beginning):
     field_not_matching = []
     field_repo = []
 
-    print("hi",thedata)
     theattachment = []
 
     for value in thedata:

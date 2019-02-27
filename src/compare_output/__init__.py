@@ -44,7 +44,13 @@ def shorten_input(thestring):
         return thestring
 
 
-def append_to_field(fields, value, mastername):
+def append_to_field(fields, value):
+    """
+    insert data while sorting them into alphabetical order when display in slack
+    :param fields: the list to be inserted.
+    :param value: the values to be inserted into the fields list
+    :return:
+    """
 
     team_data = {
         # adding team data
@@ -52,7 +58,6 @@ def append_to_field(fields, value, mastername):
             "value": value['team_version'] + format_the_time(value["team_updateddate"]),
             "short": "true"
     }
-
     master_data = {
         # adding master data
         #--trying mastername+": "+
@@ -66,8 +71,6 @@ def append_to_field(fields, value, mastername):
         'short': "true"
     }
 
-    print(len(fields))
-    print(fields)
     if len(fields) == 0 or fields[0]['title'] >= team_data['title']:
         fields.insert(0, team_data)
         fields.insert(1, master_data)
@@ -81,16 +84,16 @@ def append_to_field(fields, value, mastername):
             fields.insert(2, blank_space)
             fields.insert(3, blank_space)
         else:
-            fields.append(team_data)
-            fields.append(master_data)
-            fields.append(blank_space)
-            fields.append(blank_space)
+            fields.insert(len(fields), team_data)
+            fields.insert(len(fields), master_data)
+            fields.insert(len(fields), blank_space)
+            fields.insert(len(fields), blank_space)
 
     else:
+        # since section in slack consist of left/right field then left/right blank space. compare every 4th field
         for i in range(0, len(fields) - 4, 4):
-            print(fields[i]['title'], team_data['title'],fields[i + 4]['title'])
+
             if fields[i]['title'] <= team_data['title'] <= fields[i + 4]['title']:
-                print("match")
                 fields.insert(i + 4, team_data)
                 fields.insert(i + 5, master_data)
                 fields.insert(i + 6, blank_space)
@@ -98,12 +101,10 @@ def append_to_field(fields, value, mastername):
                 break
 
         else:
-            fields.append(team_data)
-            fields.append(master_data)
-            fields.append(blank_space)
-            fields.append(blank_space)
-
-    print('fields',fields)
+            fields.insert(len(fields), team_data)
+            fields.insert(len(fields), master_data)
+            fields.insert(len(fields), blank_space)
+            fields.insert(len(fields), blank_space)
 
     return 1
 
@@ -140,11 +141,11 @@ def create_plugin_format(thedata, thetitle_beginning):
 
     for value in thedata:
         if value["Match"] == 1:
-            append_to_field(field_matching, value, value['mastername'])
+            append_to_field(field_matching, value)
         if value["Match"] == 2:
-            append_to_field(field_not_matching, value, value['mastername'])
+            append_to_field(field_not_matching, value)
         if value["Match"] == 3:
-            append_to_field(field_repo, value, value['mastername'])
+            append_to_field(field_repo, value)
 
     # master team name with first letter capitalized
     master_name_edited = str(value['mastername']).title()

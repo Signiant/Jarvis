@@ -168,7 +168,7 @@ def get_build_url(cached_array, lookup_word, service_definition, service_version
     stack = cloudformation.Stack(service_stack_name)
 
     for tag in stack.tags:
-        if tag['Key'] == 'jenkins-build-url':
+        if tag['Key'] == 'jenkins-build-url' or tag['Key'] == 'bitbucket-build-url':
             the_url = tag['Value']
 
     # backward compatible to use previous way to get the jenkin build url

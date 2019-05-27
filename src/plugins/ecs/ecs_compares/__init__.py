@@ -116,10 +116,10 @@ def compare_environment(team_env, master_env, jenkin_build_terms):
                 result = 1
             else:
                 # if both version on bitbucket but not same commit hash
-                result = 3
+                result = 2
         else:
             # if one is jenkin build number and other one is bitbucket hash
-            result = 3
+            result = 2
 
     print("result",result)
     logging.debug("Bitbucket comparing %s and %s result is %s" % (team_env, master_env, result))

@@ -71,7 +71,7 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
 
 
 # compare the versions
-def compare_environment(team_env, master_env, jenkin_build_terms):
+def jenkins_compare_environment(team_env, master_env, jenkin_build_terms):
 
     """""
     Return types
@@ -89,8 +89,42 @@ def compare_environment(team_env, master_env, jenkin_build_terms):
             else:
                 result = 3
 
-    logging.debug("comparing %s and %s result is %s" % (team_env, master_env, result))
+    logging.debug("Jenkins comparing %s and %s result is %s" % (team_env, master_env, result))
     return result
+
+
+# compare the versions replace compare_environment
+def compare_environment(team_env, master_env, jenkin_build_terms):
+
+    """""
+    Return types
+    1 - Matches Master
+    2 - Does not match master
+    3 - branch
+    """""
+    result = 0
+    print("environment", team_env, master_env, jenkin_build_terms)
+    if 'master' in master_env and 'master' in team_env:
+        result = jenkins_compare_environment(team_env, master_env, jenkin_build_terms)
+    else:
+        team_hash=team_env.split('-')[1]
+        master_hash=master_env.split('-')[1]
+        if len(team_hash) == 7 and len(master_hash) == 7:
+            print(team_hash,master_hash)
+            print("environment",team_env,master_env)
+            if team_env == master_env:
+                result = 1
+            else:
+                # if both version on bitbucket but not same commit hash
+                result = 3
+        else:
+            # if one is jenkin build number and other one is bitbucket hash
+            result = 3
+
+    print("result",result)
+    logging.debug("Bitbucket comparing %s and %s result is %s" % (team_env, master_env, result))
+    return result
+
 
 
 def finalize_service_name(service_name, service_def, environment_code_name):
@@ -213,7 +247,7 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
     """
     compare master to teams
     :param tkey:
-    :param m_array:
+    :param m_array: the version of services in prod branch
     :param cached_array: jenkin_data from superjenkin
     :param jenkins_build_tags:
     :param excluded_services:
@@ -375,5 +409,4 @@ def main_ecs_check_versions(master_array, team_array, jenkins_build_tags, superj
                                                 team_exclusion_list)
 
     return compared_data
-
 

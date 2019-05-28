@@ -204,7 +204,7 @@ def get_build_url(cached_array, lookup_word, service_definition, service_version
     for tag in stack.tags:
         if tag['Key'] == 'jenkins-build-url':
             the_url = tag['Value']
-        elif tag['Key'] == 'bitbucket-build-url':
+        elif tag['Key'] == 'bitbucket-build-url' and len(tag['Value'])>1:
             parse_bb_val=tag['Value'].split('/')[0]
             repo_name = parse_bb_val[0]
             pip_num=parse_bb_val[1]

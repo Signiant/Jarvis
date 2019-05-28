@@ -202,8 +202,13 @@ def get_build_url(cached_array, lookup_word, service_definition, service_version
     stack = cloudformation.Stack(service_stack_name)
 
     for tag in stack.tags:
-        if tag['Key'] == 'jenkins-build-url' or tag['Key'] == 'bitbucket-build-url':
+        if tag['Key'] == 'jenkins-build-url':
             the_url = tag['Value']
+        elif tag['Key'] == 'bitbucket-build-url':
+            parse_bb_val=tag['Value'].split('/')[0]
+            repo_name = parse_bb_val[0]
+            pip_num=parse_bb_val[1]
+            the_url = "https://bitbucket.org/signiant/{0}/addon/pipelines/home#!/results/{1}".format(repo_name,pip_num)
 
     # backward compatible to use previous way to get the jenkin build url
     if not the_url:
@@ -295,6 +300,7 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
                                     not_in_team_array.remove(m_data)
 
                                 #############################################
+                                print(t_array, " compare ", m_data)
                                 print(t_array['version'], " compare ", m_data['version'])
 
                                 amatch = compare_environment(t_array['version'], m_data['version'], jenkins_build_tags)

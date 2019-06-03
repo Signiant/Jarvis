@@ -127,32 +127,31 @@ def compare_environment(team_env, master_env, jenkin_build_terms ):
     3 - branch (yellow)
     """""
     result = 0
-    if 'master' in master_env['version'] and 'master' in team_env['version']:
+    team_hash = team_env['version'].split('-')[-1]
+    master_hash = master_env['version'].split('-')[-1]
+
+    if len(team_hash) == 7 and len(master_hash) == 7:
+        if team_hash == master_hash:
+            result = 1
+        else:
+            if team_env['build_date'] and master_env['build_date']:
+                team_time = time.strptime(team_env['build_date'], "%Y-%m-%dT%H:%M:%S+00:00")
+                master_time = time.strptime(master_env['build_date'], "%Y-%m-%dT%H:%M:%S+00:00")
+                if team_time > master_time:
+                    # if team commit time newer than master commit time (yellow)
+                    result = 3
+                else:
+                    # master commit time is newer (red)
+                    result = 2
+            else:
+                # if build date does not exist for either or both team/master service (red)
+                result = 2
+    elif 'master' in master_env['version'] and 'master' in team_env['version']:
         # only jenkin build master on mutiple environment (not bitbucket way)
         result = jenkins_compare_environment(team_env['version'], master_env['version'], jenkin_build_terms)
     else:
-        team_hash=team_env['version'].split('-')[-1]
-        master_hash=master_env['version'].split('-')[-1]
-        if len(team_hash) == 7 and len(master_hash) == 7:
-
-            if team_hash == master_hash:
-                result = 1
-            else:
-                if team_env['build_date'] and master_env['build_date']:
-                    team_time = time.strptime(team_env['build_date'], "%Y-%m-%dT%H:%M:%S+00:00")
-                    master_time = time.strptime(master_env['build_date'], "%Y-%m-%dT%H:%M:%S+00:00")
-                    if team_time > master_time:
-                        # if team commit time newer than master commit time (yellow)
-                        result = 3
-                    else:
-                        # master commit time is newer (red)
-                        result = 2
-                else:
-                    # if build date does not exist for either or both team/master service (red)
-                    result = 2
-        else:
-            # if one is jenkin build number and other one is bitbucket hash
-            result = 2
+        # if one is jenkin build number and other one is bitbucket hash
+        result = 2
 
     logging.debug("Bitbucket comparing %s and %s result is %s" % (team_env['version'], master_env['version'], result))
     return result

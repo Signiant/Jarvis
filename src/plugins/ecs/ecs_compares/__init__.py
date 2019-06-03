@@ -1,6 +1,7 @@
 import boto3
 import logging
 import re
+import time
 
 # get ecs data from boto call
 def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, env_code_name, role_arn):
@@ -54,6 +55,24 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
                     # detailed ecs service
                     team_service_definition = image['taskDefinition']['family']
 
+                    # this section of boto3 code slows down jarvis significantly
+                    # because it calls on cloudformation describe_stack for every microservices
+                    service_stack_name= re.split('-[A-Za-z]*Task-',team_service_definition.encode("utf-8"))[0]
+                    # print(service_stack_name)
+                    cf_client = session.client("cloudformation", region_name=region_name)
+                    try:
+                        stack = cf_client.describe_stacks(StackName=service_stack_name)
+                    except Exception as e:
+                        print('Error: {0}. No stack found for {0}'.format(e, service_stack_name))
+                        continue
+                    build_date = ""
+
+                    for tag in stack['Stacks'][0]['Tags']:
+                        if tag['Key'] == 'bitbucket-build-date':
+                            build_date = tag['Value']
+                            break
+
+
                     # version_parsed, team_service_name, region_name
                     if len(version_output) > 1:
                         c_service = {"version": service_version_ending.encode("utf-8"),
@@ -61,7 +80,8 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
                                      "service_definition": team_service_definition.encode("utf-8"),
                                      "regionname": region_name.encode("utf-8"),
                                      "slackchannel": slack_channel.encode("utf-8"),
-                                     "environment_code_name": env_code_name.encode("utf-8")}
+                                     "environment_code_name": env_code_name.encode("utf-8"),
+                                     "build_date": build_date.encode("utf-8")}
                         service_versions.append(c_service)
 
         except Exception as e:
@@ -71,7 +91,7 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
 
 
 # compare the versions
-def compare_environment(team_env, master_env, jenkin_build_terms):
+def jenkins_compare_environment(team_env, master_env, jenkins_build_terms):
 
     """""
     Return types
@@ -80,16 +100,62 @@ def compare_environment(team_env, master_env, jenkin_build_terms):
     3 - branch
     """""
     result = 0
-    if jenkin_build_terms[0] in master_env or jenkin_build_terms[1] in master_env:
+
+    if jenkins_build_terms[0] in master_env or jenkins_build_terms[1] in master_env:
         if team_env == master_env:
             result = 1
         else:
-            if (jenkin_build_terms[0] in team_env or jenkin_build_terms[1] in team_env):
-                result = 2
-            else:
+            team_deploy_num=int(team_env.split('-')[-1])
+            prod_deploy_num=int(master_env.split('-')[-1])
+            if (jenkins_build_terms[0] in team_env or jenkins_build_terms[1] in team_env) and team_deploy_num > prod_deploy_num:
+                # if team deploy number in jenkin > prod deploy number (yellow)
                 result = 3
+            else:
+                result = 2
 
-    logging.debug("comparing %s and %s result is %s" % (team_env, master_env, result))
+    logging.debug("Jenkins comparing %s and %s result is %s" % (team_env, master_env, result))
+    return result
+
+
+# compare the versions replace compare_environment
+def compare_environment(team_env, master_env, jenkins_build_terms ):
+
+    """""
+    Return types
+    1 - Matches Master
+    2 - Does not match master (red)
+    3 - branch (yellow)
+    """""
+    result = 0
+    team_hash = team_env['version'].split('-')[-1]
+    master_hash = master_env['version'].split('-')[-1]
+
+    if len(team_hash) == 7 and len(master_hash) == 7:
+        if team_hash == master_hash:
+            result = 1
+        else:
+            if team_env['build_date'] and master_env['build_date']:
+                team_time = time.strptime(team_env['build_date'], "%Y-%m-%dT%H:%M:%S+00:00")
+                master_time = time.strptime(master_env['build_date'], "%Y-%m-%dT%H:%M:%S+00:00")
+                if team_time > master_time:
+                    # if team commit time newer than master commit time (yellow)
+                    result = 3
+                else:
+                    # master commit time is newer (red)
+                    result = 2
+            else:
+                # if build date does not exist for either or both team/master service (red)
+                result = 2
+    elif len(team_hash) == 7 or len(master_hash) == 7:
+        # if one is jenkin build number and other one is bitbucket hash
+        result = 2
+    elif 'master' in master_env['version'] and 'master' in team_env['version']:
+        # only jenkin build master on mutiple environment (not bitbucket way)
+        result = jenkins_compare_environment(team_env['version'], master_env['version'], jenkins_build_terms)
+    else:
+        result = 2
+
+    logging.debug("Bitbucket comparing %s and %s result is %s" % (team_env['version'], master_env['version'], result))
     return result
 
 
@@ -170,6 +236,11 @@ def get_build_url(cached_array, lookup_word, service_definition, service_version
     for tag in stack.tags:
         if tag['Key'] == 'jenkins-build-url':
             the_url = tag['Value']
+        elif tag['Key'] == 'bitbucket-build-url' and len(tag['Value'])>1:
+            parse_bb_val=tag['Value'].split('/')
+            repo_name = parse_bb_val[0]
+            pip_num=parse_bb_val[1]
+            the_url = "https://bitbucket.org/signiant/{0}/addon/pipelines/home#!/results/{1}".format(repo_name,pip_num)
 
     # backward compatible to use previous way to get the jenkin build url
     if not the_url:
@@ -213,7 +284,7 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
     """
     compare master to teams
     :param tkey:
-    :param m_array:
+    :param m_array: the version of services in prod branch
     :param cached_array: jenkin_data from superjenkin
     :param jenkins_build_tags:
     :param excluded_services:
@@ -261,9 +332,10 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
                                     not_in_team_array.remove(m_data)
 
                                 #############################################
-                                print(t_array['version'], " compare ", m_data['version'])
+                                # print(t_array, " compare ", m_data)
+                                # print(t_array['version'], " compare ", m_data['version'])
 
-                                amatch = compare_environment(t_array['version'], m_data['version'], jenkins_build_tags)
+                                amatch = compare_environment(t_array, m_data, jenkins_build_tags)
                                 logging.debug(t_array['version'] + " === " + m_data['version'] + "\n")
 
                                 # if the match is of type 2 where environment/service is not matching prod master
@@ -375,5 +447,4 @@ def main_ecs_check_versions(master_array, team_array, jenkins_build_tags, superj
                                                 team_exclusion_list)
 
     return compared_data
-
 

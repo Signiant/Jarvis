@@ -146,11 +146,13 @@ def compare_environment(team_env, master_env, jenkin_build_terms ):
             else:
                 # if build date does not exist for either or both team/master service (red)
                 result = 2
+    elif len(team_hash) == 7 or len(master_hash) == 7:
+        # if one is jenkin build number and other one is bitbucket hash
+        result = 2
     elif 'master' in master_env['version'] and 'master' in team_env['version']:
         # only jenkin build master on mutiple environment (not bitbucket way)
         result = jenkins_compare_environment(team_env['version'], master_env['version'], jenkin_build_terms)
     else:
-        # if one is jenkin build number and other one is bitbucket hash
         result = 2
 
     logging.debug("Bitbucket comparing %s and %s result is %s" % (team_env['version'], master_env['version'], result))

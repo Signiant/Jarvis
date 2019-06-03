@@ -55,8 +55,8 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
                     # detailed ecs service
                     team_service_definition = image['taskDefinition']['family']
 
-                    # this section of boto3 get code slow down jarvis to extract tag from each cloudformation stack
-                    # service_stack_name=team_service_definition.encode("utf-8").split('-Task-')[0]
+                    # this section of boto3 code slows down jarvis significantly
+                    # because it calls on cloudformation describe_stack for every microservices
                     service_stack_name= re.split('-[A-Za-z]*Task-',team_service_definition.encode("utf-8"))[0]
                     # print(service_stack_name)
                     cf_client = session.client("cloudformation", region_name=region_name)
@@ -91,7 +91,7 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
 
 
 # compare the versions
-def jenkins_compare_environment(team_env, master_env, jenkin_build_terms):
+def jenkins_compare_environment(team_env, master_env, jenkins_build_terms):
 
     """""
     Return types
@@ -101,13 +101,13 @@ def jenkins_compare_environment(team_env, master_env, jenkin_build_terms):
     """""
     result = 0
 
-    if jenkin_build_terms[0] in master_env or jenkin_build_terms[1] in master_env:
+    if jenkins_build_terms[0] in master_env or jenkins_build_terms[1] in master_env:
         if team_env == master_env:
             result = 1
         else:
             team_deploy_num=int(team_env.split('-')[-1])
             prod_deploy_num=int(master_env.split('-')[-1])
-            if (jenkin_build_terms[0] in team_env or jenkin_build_terms[1] in team_env) and team_deploy_num > prod_deploy_num:
+            if (jenkins_build_terms[0] in team_env or jenkins_build_terms[1] in team_env) and team_deploy_num > prod_deploy_num:
                 # if team deploy number in jenkin > prod deploy number (yellow)
                 result = 3
             else:
@@ -118,7 +118,7 @@ def jenkins_compare_environment(team_env, master_env, jenkin_build_terms):
 
 
 # compare the versions replace compare_environment
-def compare_environment(team_env, master_env, jenkin_build_terms ):
+def compare_environment(team_env, master_env, jenkins_build_terms ):
 
     """""
     Return types
@@ -151,7 +151,7 @@ def compare_environment(team_env, master_env, jenkin_build_terms ):
         result = 2
     elif 'master' in master_env['version'] and 'master' in team_env['version']:
         # only jenkin build master on mutiple environment (not bitbucket way)
-        result = jenkins_compare_environment(team_env['version'], master_env['version'], jenkin_build_terms)
+        result = jenkins_compare_environment(team_env['version'], master_env['version'], jenkins_build_terms)
     else:
         result = 2
 

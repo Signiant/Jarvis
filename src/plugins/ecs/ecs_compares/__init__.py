@@ -100,21 +100,25 @@ def jenkins_compare_environment(team_env, master_env, jenkin_build_terms):
     3 - branch
     """""
     result = 0
+
     if jenkin_build_terms[0] in master_env or jenkin_build_terms[1] in master_env:
         if team_env == master_env:
             result = 1
         else:
-            if (jenkin_build_terms[0] in team_env or jenkin_build_terms[1] in team_env):
-                result = 2
-            else:
+            team_deploy_num=int(team_env.split('-')[-1])
+            prod_deploy_num=int(master_env..split('-')[-1])
+            if (jenkin_build_terms[0] in team_env or jenkin_build_terms[1] in team_env) and team_deploy_num > prod_deploy_num:
+                # if team deploy number in jenkin > prod deploy number (yellow)
                 result = 3
+            else:
+                result = 2
 
     logging.debug("Jenkins comparing %s and %s result is %s" % (team_env, master_env, result))
     return result
 
 
 # compare the versions replace compare_environment
-def compare_environment(team_env, master_env, jenkin_build_terms,service_stack_name ):
+def compare_environment(team_env, master_env, jenkin_build_terms ):
 
     """""
     Return types
@@ -330,7 +334,7 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
                                 # print(t_array, " compare ", m_data)
                                 # print(t_array['version'], " compare ", m_data['version'])
 
-                                amatch = compare_environment(t_array, m_data, jenkins_build_tags, the_master_service_name)
+                                amatch = compare_environment(t_array, m_data, jenkins_build_tags)
                                 logging.debug(t_array['version'] + " === " + m_data['version'] + "\n")
 
                                 # if the match is of type 2 where environment/service is not matching prod master

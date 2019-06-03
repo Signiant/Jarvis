@@ -106,7 +106,7 @@ def jenkins_compare_environment(team_env, master_env, jenkin_build_terms):
             result = 1
         else:
             team_deploy_num=int(team_env.split('-')[-1])
-            prod_deploy_num=int(master_env..split('-')[-1])
+            prod_deploy_num=int(master_env.split('-')[-1])
             if (jenkin_build_terms[0] in team_env or jenkin_build_terms[1] in team_env) and team_deploy_num > prod_deploy_num:
                 # if team deploy number in jenkin > prod deploy number (yellow)
                 result = 3

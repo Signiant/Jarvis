@@ -1,14 +1,16 @@
-import boto3,json,imp,pprint
-from botocore.exceptions import ClientError
+import boto3
 import logging
 
 appversions = []
 
-def log (message):
-    print(id() + ": " + message)
+
+def log(message):
+    print((id() + ": " + message))
+
 
 def id():
     return "eb"
+
 
 def get_new_boto_session(role_arn):
 
@@ -29,7 +31,7 @@ def get_new_boto_session(role_arn):
     return mysession
 
 
-#eb do boto call and retrieve data
+# eb do boto call and retrieve data
 def eb_check_versions(region_name, env_array, role_arn, team_name):
     appversions = []
 
@@ -83,7 +85,7 @@ def eb_check_versions(region_name, env_array, role_arn, team_name):
                         activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
 
                     except Exception as e:
-                        print("Route53 call error "+str(e))
+                        print(("Route53 call error "+str(e)))
 
                     if activeLoadBalancer:
                         if env['EndpointURL'].lower() in activeLoadBalancer.lower() and env['Health'] == "Green":
@@ -92,7 +94,7 @@ def eb_check_versions(region_name, env_array, role_arn, team_name):
     return appversions
 
 
-#version print out for eb environments
+# version print out for eb environments
 def get_version_output_string(thestring):
 
     team_dot_index = thestring.find('.')
@@ -108,7 +110,8 @@ def get_version_output_string(thestring):
 
     return e_str[1:]
 
-#extract the second part of service name to compare
+
+# extract the second part of service name to compare
 def get_service_name_ending(thestring):
     slash_index = thestring.find('/')
     thestring = thestring[(slash_index+1):]
@@ -116,7 +119,8 @@ def get_service_name_ending(thestring):
     thestring = thestring[(slash_index + 1):]
     return thestring.replace('.json',"")
 
-#Main comparing function
+
+# Main comparing function
 def compare_environment(team_env,master_env, j_tags):
 
     """""
@@ -136,9 +140,9 @@ def compare_environment(team_env,master_env, j_tags):
             if ('master' in team_env):
                 result = 2
 
-    #print " MATCH IS: "+team_env +" == " + master_env+" ==> "+str(result)
+    # print " MATCH IS: "+team_env +" == " + master_env+" ==> "+str(result)
 
-    print("comparing %s and %s result is %s"% (team_env,master_env,result))
+    print(("comparing %s and %s result is %s"% (team_env,master_env,result)))
     return result
 
 
@@ -148,7 +152,8 @@ def does_key_exist(thearray,thestring):
     else:
         return ""
 
-#compress string is larger than 30 length
+
+# compress string is larger than 30 length
 def shorten_input(thestring):
     if len(thestring) > 30:
         thestring = thestring[:27]+"..."
@@ -157,7 +162,7 @@ def shorten_input(thestring):
         return thestring
 
 
-#get build url
+# get build url
 def format_string_for_comparison(word):
     if "-" in word:
         word = word.replace("-","_")
@@ -167,6 +172,7 @@ def format_string_for_comparison(word):
     word = word.lower().split("_")
 
     return word
+
 
 def build_compare_words(lookup,compareto, j_tags):
 
@@ -241,10 +247,8 @@ def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
             master_version_prefix = m_data['version'][0:master_dot_index]
             master_version_ending = m_data['version'][master_dot_index:]
 
-
             if team_version_prefix == master_version_prefix:
-
-                #remove matched applications from not_in_team_array
+                # remove matched applications from not_in_team_array
                 not_in_team_array.remove(m_data)
 
                 amatch = compare_environment(team_version_ending, master_version_ending, jenkins_build_tags)
@@ -260,7 +264,7 @@ def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
                                                      amatch, ismaster=False)
 
 
-                print('master ver: %s, team ver: %s, Match %s' %(master_version_entry, team_version_entry, amatch))
+                print(('master ver: %s, team ver: %s, Match %s' %(master_version_entry, team_version_entry, amatch)))
                 eb_data.append({"master_env":m_data['environmentname'],
                          "master_version": master_version_entry,
                          "master_updateddate":m_data['dateupdated'],
@@ -272,7 +276,7 @@ def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
                          "pluginname": "eb"
                         })
 
-    #add all master applications not found to eb data output
+    # add all master applications not found to eb data output
     if not_in_team_array:
         for m_data in not_in_team_array:
             prelim_master_version = get_version_output_string(m_data['version'])
@@ -280,7 +284,7 @@ def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
                                                  prelim_master_version, jenkins_build_tags,
                                                  amatch, ismaster=True)
 
-            print('master ver: %s, team ver: %s, Match %s' % (master_version_entry, "", "2"))
+            print(('master ver: %s, team ver: %s, Match %s' % (master_version_entry, "", "2")))
             eb_data.append({"master_env": m_data['environmentname'],
                             "master_version": master_version_entry,
                             "master_updateddate": m_data['dateupdated'],
@@ -295,7 +299,7 @@ def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
     return compared_array
 
 
-#main eb plugin function
+# main eb plugin function
 def main_eb_check_versions(master_array, team_array, superjenkins_data, jenkins_build_tags):
 
     master_plugin_data = eb_check_versions(master_array['region_name'],

@@ -1,1 +1,6 @@
 .idea/*
+aws.config
+SLACK_TEAM_TOKEN
+test_event.json
+*.bak
+__pycache__

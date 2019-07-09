@@ -1,5 +1,4 @@
-import boto3, json, imp, pprint
-from botocore.exceptions import ClientError
+import boto3
 import logging
 import xml.etree.ElementTree as ET
 
@@ -7,7 +6,8 @@ appversions = []
 
 
 def log(message):
-    print(id() + ": " + message)
+    print((id() + ": " + message))
+
 
 def id():
     return "s3"
@@ -29,13 +29,12 @@ def read_s3_data(my_bucket, my_key, role_arn):
 
         obj = s3.Object(my_bucket, my_key)
         json_body = obj.get()['Body'].read()
-
-        json_body = ("").join(json_body.split('\n\t\t'))
-        #change the json data to xml fromstring
+        json_body = ("").join(json_body.decode().split('\n\t\t'))
+        # change the json data to xml from string
         tree = ET.fromstring(json_body)
 
         for item in tree.iter():
-            #getting values from xml string object
+            # getting values from xml string object
             if item.tag == "version":
                 os_name = previous_item_tag
                 if item.text != '\n':
@@ -45,11 +44,11 @@ def read_s3_data(my_bucket, my_key, role_arn):
                 temp_dir["os"] = os_name
                 result.append(temp_dir)
                 temp_dir = dict()
-            #Holds the previous item tag that contains the os name
+            # Holds the previous item tag that contains the os name
             previous_item_tag = item.tag
 
     except Exception as e:
-        print("Error in retrieving and creating json from s3 ==> " + str(e))
+        print(("Error in retrieving and creating json from s3 ==> " + str(e)))
 
     return result
 
@@ -78,7 +77,6 @@ def get_s3_data(the_array):
     temp_dir = []
     page_iterator = None
 
-    
     if the_array['RoleArn']:
         mysession = get_new_boto_session(the_array['RoleArn'])
     else:
@@ -92,45 +90,45 @@ def get_s3_data(the_array):
             page_iterator = paginator.paginate(Bucket=bucket['bucketname'])
             
             for page in page_iterator:
-                #iterate through the contents of s3 lis objects, which contains all keys in bucket
+                # iterate through the contents of s3 lis objects, which contains all keys in bucket
                 page_contents = page['Contents']
 
-                #iterating through the directories in the config
+                # iterating through the directories in the config
                 for directory in bucket['Directories']:
-                    lookup_directory = filter(None, directory['Directory'].split('/'))
+                    lookup_directory = [_f for _f in directory['Directory'].split('/') if _f]
                     
-                    #This checks if the comparison type is xml
+                    # This checks if the comparison type is xml
                     if directory['compare_type'] == 'check_xml':
                         for item in page_contents:
-                            lookup_item = filter(None, item[u'Key'].split('/'))
+                            lookup_item = [_f for _f in item['Key'].split('/') if _f]
 
-                            #The lookup_item is the file from the s3 call contents and the lookup_directory is the 
+                            # The lookup_item is the file from the s3 call contents and the lookup_directory is the
                             # directory under which we are looking 
                             if lookup_directory and lookup_item:
                                 if lookup_directory[0] in lookup_item[0] and len(lookup_item) == len(lookup_directory) + 1:
 
                                     if ".xml" in lookup_item[1]:
                                         for the_file in directory['file_list']:
-                                            if item[u'Key'].split("/")[-1] in the_file['filename']:
-                                                #if the file is in the directory and xml than read it
-                                                s3_data_for_key = read_s3_data(bucket['bucketname'],item[u'Key'], the_array['RoleArn'])
-                                                temp_dir.append({item[u'Key'].split("/")[-1]:s3_data_for_key,"filekey":the_file["filekey"]})
+                                            if item['Key'].split("/")[-1] in the_file['filename']:
+                                                # if the file is in the directory and xml than read it
+                                                s3_data_for_key = read_s3_data(bucket['bucketname'],item['Key'], the_array['RoleArn'])
+                                                temp_dir.append({item['Key'].split("/")[-1]:s3_data_for_key,"filekey":the_file["filekey"]})
                                                 break
                                                 
-                            #if the files being looked for are in the root directory of the bucket than these operations will
+                            # if the files being looked for are in the root directory of the bucket than these operations will
                             # be used to retrieve xml data
                             elif len(lookup_directory) == 0 and lookup_item:
                                 if len(lookup_item) == 1:
                                     # add values to be associated with each directory
                                     if ".xml" in lookup_item[0]:
                                         for the_file in directory['file_list']:
-                                            if item[u'Key'].split("/")[-1] in the_file['filename']:
-                                                s3_data_for_key = read_s3_data(bucket['bucketname'], item[u'Key'],the_array['RoleArn'])
-                                                temp_dir.append({item[u'Key'].split("/")[-1]: s3_data_for_key,"filekey": the_file["filekey"]})
+                                            if item['Key'].split("/")[-1] in the_file['filename']:
+                                                s3_data_for_key = read_s3_data(bucket['bucketname'], item['Key'],the_array['RoleArn'])
+                                                temp_dir.append({item['Key'].split("/")[-1]: s3_data_for_key,"filekey": the_file["filekey"]})
                                                 break
 
                     if temp_dir:
-                        #The array of file data is input into the dictionary of directories
+                        # The array of file data is input into the dictionary of directories
                         store_result[directory['Directory']] = temp_dir
                         temp_dir = []
 
@@ -139,10 +137,11 @@ def get_s3_data(the_array):
                 store_result = dict()
 
         except Exception as e:
-            print("Error in doing call for bucket " + str(e))
+            print(("Error in doing call for bucket " + str(e)))
     return store_bucket_result
 
-#compare the file versions
+
+# compare the file versions
 def compare_file_version(master_arr_comp, team_arr_comp):
     if master_arr_comp["version"] == team_arr_comp["version"]:
         return 1
@@ -156,7 +155,7 @@ def get_team_name(m_data):
             return data['team_name']
 
 
-#Compare the data retrieved from the s3 calls for master and secondary data sets 
+# Compare the data retrieved from the s3 calls for master and secondary data sets
 def s3_compare_master_team(m_array, tkey, team_name):
 
     s3_data = []
@@ -166,7 +165,7 @@ def s3_compare_master_team(m_array, tkey, team_name):
                 for t_item in tkey:
                     for t_stuff in tkey[t_item]:
 
-                        #compare directories
+                        # compare directories
                         if m_stuff == t_stuff:
 
                             master_ver = []
@@ -184,11 +183,11 @@ def s3_compare_master_team(m_array, tkey, team_name):
                                                     if t_system is not "filekey":
                                                         for the_t in t_file[t_system]:
 
-                                                            #compare the file key and os names
+                                                            # compare the file key and os names
                                                             if the_m["os"] == the_t["os"] and m_file['filekey'] == t_file['filekey']:
                                                                 amatch = compare_file_version(the_m,the_t)
 
-                                                                #Formats the file name and version for master and secondary that slack will output
+                                                                # Formats the file name and version for master and secondary that slack will output
                                                                 current_t_file_name = "\n\n"+str(t_system).split(".")[0] +"\n"+ str(the_t['version'])
                                                                 current_m_file_name = "\n\n" + str(m_system).split(".")[0] + "\n" + str(the_m['version'])
 
@@ -203,7 +202,7 @@ def s3_compare_master_team(m_array, tkey, team_name):
                                                                     master_ver.append(current_m_file_name)
                                                                     team_ver.append(current_t_file_name)
 
-                                                                #if there is one mismatch between master and secondary data in directory
+                                                                # if there is one mismatch between master and secondary data in directory
                                                                 # files than amatch_status remains false until next directory
                                                                 if amatch_status == False:
                                                                     amatch = 2
@@ -215,7 +214,7 @@ def s3_compare_master_team(m_array, tkey, team_name):
 
                             if t_stuff == '':
                                 t_stuff = str(t_item)
-                            #This is the dictionary that the compare_output module can decipher for output
+                            # This is the dictionary that the compare_output module can decipher for output
                             s3_data.append({"master_env": m_stuff,
                                             "master_version": "\n"+("\n").join(master_ver),
                                             "master_updateddate": "",
@@ -236,7 +235,7 @@ def main_eb_check_versions(master_array, team_array):
     master_plugin_data = get_s3_data(master_array)
     compared_data = []
 
-    #get the team name associated with master data set
+    # get the team name associated with master data set
     team_name = get_team_name(master_array)
 
     if master_plugin_data:

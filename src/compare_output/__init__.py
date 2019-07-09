@@ -1,11 +1,13 @@
 import logging
-import pprint
+
 
 def id():
     return "output"
 
+
 def log(message):
-    print(id() + ": " + message)
+    print((id() + ": " + message))
+
 
 def get_themessage(value):
     if value == 1:
@@ -19,14 +21,14 @@ def get_themessage(value):
 def display_results(data_array):
     for value in data_array:
         themessage = get_themessage(value["Match"])
-        print("M_Environment = [" + value['master_env'] + "] *  M_Version = " + value['master_version'] +"master updated on "
+        print(("M_Environment = [" + value['master_env'] + "] *  M_Version = " + value['master_version'] +"master updated on "
               + value["master_updateddate"].strftime('%m/%d/%Y %H:%M:%S')
               + " * Team: " +value['team']+ " T_Environment = ["+value['team_env'] + "] * T_Version " + value['team_version']
               + "master updated on "+ value["team_updateddate"].strftime('%m/%d/%Y %H:%M:%S')
-              +" === "+ themessage+"\n")
+              +" === "+ themessage+"\n"))
 
 
-#format time if data available
+# format time if data available
 def format_the_time(thetime):
     if thetime == "":
         time_updated =""
@@ -35,7 +37,7 @@ def format_the_time(thetime):
     return time_updated
 
 
-#compress string is larger than 28 chars
+# compress string is larger than 28 chars
 def shorten_input(thestring):
     if len(thestring) > 28:
         thestring = thestring[:25]+"..."
@@ -60,7 +62,7 @@ def append_to_field(fields, value):
     }
     master_data = {
         # adding master data
-        #--trying mastername+": "+
+        # --trying mastername+": "+
         'title': shorten_input(value['master_env']),
         'value': value['master_version'] + format_the_time(value["master_updateddate"]),
         'short': "true"
@@ -180,7 +182,7 @@ def no_elements_found(thetitle_beginning,message=None):
     return theattachment
 
 
-#main output to slack function
+# main output to slack function
 def slack_payload(data_array, eachteam):
     attachments = []
     logging.debug("printing data array in output_slack_payload")

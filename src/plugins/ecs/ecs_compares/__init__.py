@@ -3,6 +3,7 @@ import logging
 import re
 import time
 
+
 # get ecs data from boto call
 def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, env_code_name, role_arn):
 
@@ -33,9 +34,9 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
                 service_paginator = client.get_paginator('list_services')
                 service_iterator = service_paginator.paginate(cluster=cluster)
         except Exception as e:
-            print("Error obtaining list of ECS services for " + cluster + " (" + str(e) + ")")
+            print(("Error obtaining list of ECS services for " + cluster + " (" + str(e) + ")"))
         except KeyError as e:
-            print("Key " + e + "not found")
+            print(("Key " + e + "not found"))
 
         try:
             for service in service_iterator:
@@ -57,13 +58,13 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
 
                     # this section of boto3 code slows down jarvis significantly
                     # because it calls on cloudformation describe_stack for every microservices
-                    service_stack_name= re.split('-[A-Za-z]*Task-',team_service_definition.encode("utf-8"))[0]
+                    service_stack_name = re.split('-[A-Za-z]*Task-', team_service_definition)[0]
                     # print(service_stack_name)
                     cf_client = session.client("cloudformation", region_name=region_name)
                     try:
                         stack = cf_client.describe_stacks(StackName=service_stack_name)
                     except Exception as e:
-                        print('Error: {0}. No stack found for {0}'.format(e, service_stack_name))
+                        print(('Error: {0}. No stack found for {0}'.format(e, service_stack_name)))
                         continue
                     build_date = ""
 
@@ -72,20 +73,19 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
                             build_date = tag['Value']
                             break
 
-
                     # version_parsed, team_service_name, region_name
                     if len(version_output) > 1:
-                        c_service = {"version": service_version_ending.encode("utf-8"),
-                                     "servicename": service_version_prefix.encode("utf-8"),
-                                     "service_definition": team_service_definition.encode("utf-8"),
-                                     "regionname": region_name.encode("utf-8"),
-                                     "slackchannel": slack_channel.encode("utf-8"),
-                                     "environment_code_name": env_code_name.encode("utf-8"),
-                                     "build_date": build_date.encode("utf-8")}
+                        c_service = {"version": service_version_ending,
+                                     "servicename": service_version_prefix,
+                                     "service_definition": team_service_definition,
+                                     "regionname": region_name,
+                                     "slackchannel": slack_channel,
+                                     "environment_code_name": env_code_name,
+                                     "build_date": build_date}
                         service_versions.append(c_service)
 
         except Exception as e:
-            print("Error obtaining paginated services for " + str(cluster) + " (" + str(e) + ")")
+            print(("Error obtaining paginated services for " + str(cluster) + " (" + str(e) + ")"))
 
     return service_versions
 
@@ -181,7 +181,6 @@ def finalize_service_name(service_name, service_def, environment_code_name):
 
 def build_compare_words(lookup, compareto, jenkin_build_terms):
     """
-
     :param lookup:
     :param compareto:
     :param jenkin_build_terms:
@@ -279,7 +278,6 @@ def comp_strings_charnum(string1, string2):
     return result
 
 
-
 def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, excluded_services=None):
     """
     compare master to teams
@@ -353,11 +351,11 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
                                 ecs_team_version_entry = "ver: " + t_array['version']
 
                                 if amatch == 0:
-                                    print ("match is zero ", t_array['servicename'], " task_def: ", t_array[
-                                        'service_definition'], " => ", the_team_service_name)
+                                    print(("match is zero ", t_array['servicename'], " task_def: ", t_array[
+                                        'service_definition'], " => ", the_team_service_name))
 
                                 # see if a slackchannel is available for team
-                                if t_array.has_key('slackchannel') == False:
+                                if ('slackchannel' in t_array) == False:
                                     t_array['slackchannel'] = ""
 
                                 ecs_data.append({"master_env": the_master_service_name[0],
@@ -410,8 +408,7 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
                                      "regionname": "",
                                      "pluginname": "ecs"})
 
-
-    #remove duplicates in ecs_data list
+    # remove duplicates in ecs_data list
     ecs_data_temp = []
     for ecs_service in ecs_data:
         if ecs_service not in ecs_data_temp:
@@ -422,13 +419,14 @@ def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, exc
     return compared_array
 
 
-
 # main ecs plugin function
 def main_ecs_check_versions(master_array, team_array, jenkins_build_tags, superjenkins_data, team_exclusion_list):
     masterdata = dict()
 
-    master_plugin_data = ecs_check_versions(master_array['account'], master_array['region_name'],
-                                            master_array['cluster_name'], "",
+    master_plugin_data = ecs_check_versions(master_array['account'],
+                                            master_array['region_name'],
+                                            master_array['cluster_name'],
+                                            "",
                                             master_array['environment_code_name'],
                                             master_array['RoleArn'])
 
@@ -445,6 +443,4 @@ def main_ecs_check_versions(master_array, team_array, jenkins_build_tags, superj
                                                 superjenkins_data,
                                                 jenkins_build_tags,
                                                 team_exclusion_list)
-
     return compared_data
-

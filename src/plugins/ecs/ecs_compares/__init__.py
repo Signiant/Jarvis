@@ -123,36 +123,44 @@ def compare_environment(team_env, master_env, jenkins_build_terms ):
     """""
     Return types
     1 - Matches Master
-    2 - Does not match master (red)
-    3 - branch (yellow)
+    2 - Does not match master. Master is ahead(red)
+    3 - branch is ahead (yellow)
     """""
     result = 0
     team_hash = team_env['version'].split('-')[-1]
     master_hash = master_env['version'].split('-')[-1]
+    team_branch_name = team_env['version'].replace('_','-').split('-')[1:-1]
+    master_branch_name = master_env['version'].replace('_','-').split('-')[1:-1]
 
     if len(team_hash) == 7 and len(master_hash) == 7:
         if team_hash == master_hash:
+            # if commit hash match result (green)
             result = 1
+        elif len(team_branch_name) > 0:
+            # if a sub team branch exist and is currently deployed in the dev environment (yellow)
+            result = 3
         else:
             if team_env['build_date'] and master_env['build_date']:
                 team_time = time.strptime(team_env['build_date'], "%Y-%m-%dT%H:%M:%S+00:00")
                 master_time = time.strptime(master_env['build_date'], "%Y-%m-%dT%H:%M:%S+00:00")
                 if team_time > master_time:
-                    # if team commit time newer than master commit time (yellow)
+                    # if team branch commit time newer than master commit time (yellow)
                     result = 3
                 else:
-                    # master commit time is newer (red)
+                    # master commit time is newer than team branch commit time (red)
                     result = 2
             else:
                 # if build date does not exist for either or both team/master service (red)
                 result = 2
     elif len(team_hash) == 7 or len(master_hash) == 7:
-        # if one is jenkin build number and other one is bitbucket hash
+        # if one is jenkin build number and other one is bitbucket hash (red)
         result = 2
+
     elif 'master' in master_env['version'] and 'master' in team_env['version']:
-        # only jenkin build master on mutiple environment (not bitbucket way)
+        # if only jenkin build master on both prod and dev comparison environment (not bitbucket way)
         result = jenkins_compare_environment(team_env['version'], master_env['version'], jenkins_build_terms)
     else:
+        # all other scenarios
         result = 2
 
     logging.debug("Bitbucket comparing %s and %s result is %s" % (team_env['version'], master_env['version'], result))

@@ -25,7 +25,14 @@
                 "ecs:DescribeTaskDefinition",
                 "ecs:DescribeTasks",
                 "ecs:ListTasks",
-                "cloudwatch:GetMetricStatistics"
+                "cloudwatch:GetMetricStatistics",
+                "ssm:GetParameterHistory",
+                "ssm:ListTagsForResource",
+                "ssm:GetParametersByPath",
+                "ssm:GetParameters",
+                "ssm:GetParameter",
+                "ssm:DescribeParameters"
+
             ],
             "Resource": [
                 "*"

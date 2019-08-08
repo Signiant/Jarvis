@@ -31,7 +31,8 @@
                 "ssm:GetParametersByPath",
                 "ssm:GetParameters",
                 "ssm:GetParameter",
-                "ssm:DescribeParameters"
+                "ssm:DescribeParameters",
+                "kms:*"
 
             ],
             "Resource": [

@@ -95,10 +95,10 @@ def get_bb_credential():
     try:
         ssm_client = boto3.client('ssm')
         bb_api_key=ssm_client.get_parameter(Name = "JARVIS.BB_API_KEY")['Parameter']['Value']
-        bb_api_secret=ssm_client.get_parameter(Name="JARVIS.BB_API_SECRET",WithDecryption=True)['Parameter']['Value']
+        bb_api_secret=ssm_client.get_parameter(Name="JARVIS.BB_API_SECRET", WithDecryption=True)['Parameter']['Value']
 
     except Exception as e:
-        print("Error access aws ssm serviceL: " + " (" + str(e) + ")")
+        print("Error access aws ssm service: " + " (" + str(e) + ")")
 
     token_url = 'https://bitbucket.org/site/oauth2/access_token'
     data = {'grant_type': 'client_credentials', 'client_id': bb_api_key,

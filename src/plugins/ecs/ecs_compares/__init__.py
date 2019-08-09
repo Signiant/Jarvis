@@ -212,7 +212,7 @@ def compare_environment(team_env, master_env, jenkins_build_terms ):
             else:
                 # if build date does not exist for either or both team/master service (red)
                 result = 2
-    elif len(team_hash) == 7 ^ len(master_hash) == 7:
+    elif (len(team_hash) == 7) ^ (len(master_hash) == 7):
         # if one is jenkin build number or other one is bitbucket hash (red) but not both
         result = 2
 

@@ -2,6 +2,8 @@ import boto3
 import logging
 import re
 import time
+import requests
+
 
 
 # get ecs data from boto call
@@ -90,9 +92,65 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
     return service_versions
 
 
-# compare the versions
-def jenkins_compare_environment(team_env, master_env, jenkins_build_terms):
+def get_bb_credential():
+    try:
+        ssm_client = boto3.client('ssm')
+        bb_api_key=ssm_client.get_parameter(Name = "JARVIS.BB_API_KEY")['Parameter']['Value']
+        bb_api_secret=ssm_client.get_parameter(Name="JARVIS.BB_API_SECRET", WithDecryption=True)['Parameter']['Value']
 
+    except Exception as e:
+        print("Error access aws ssm service: " + " (" + str(e) + ")")
+
+    token_url = 'https://bitbucket.org/site/oauth2/access_token'
+    data = {'grant_type': 'client_credentials', 'client_id': bb_api_key,
+            'client_secret': bb_api_secret}
+    access_token = requests.post(token_url, data=data).json()
+    api_token = access_token['access_token']
+
+    return api_token
+
+def compare_bb_commit_parents(repo_name,commit_hash, compare_hash):
+    """
+    provide a commit hash and get it's parents in bitbucket
+    :param commit_hash:
+    :return:
+    """
+    api_token = get_bb_credential()
+    bb_api_url="https://api.bitbucket.org/2.0/repositories/signiant/{0}/commit/{1}".format(repo_name, commit_hash)
+
+    headers = dict()
+    headers['Authorization'] = "Bearer {0}".format(api_token)
+    headers['Content-Type'] = 'application/json'
+    api_response = requests.get(bb_api_url, headers=headers).json()
+
+    for parent in api_response['parents']:
+        if parent['hash'][0:7] == compare_hash:
+            return True
+    else:
+        return False
+
+
+def compare_build_time(team_env, master_env):
+    """
+    compare build time of two environment when team_env['build_date'] and master_env['build_date'] exist
+    :param team_env:
+    :param master_env:
+    :return:
+    """
+    team_time = time.strptime(team_env['build_date'], "%Y-%m-%dT%H:%M:%S+00:00")
+    master_time = time.strptime(master_env['build_date'], "%Y-%m-%dT%H:%M:%S+00:00")
+    if team_time > master_time:
+        # if team branch commit time newer than master commit time (yellow)
+        result = 3
+    else:
+        # master commit time is newer than team branch commit time (red)
+        result = 2
+
+    return result
+
+
+def jenkins_compare_environment(team_env, master_env, jenkins_build_terms):
+    # compare the versions
     """""
     Return types
     1 - Matches Master
@@ -117,42 +175,54 @@ def jenkins_compare_environment(team_env, master_env, jenkins_build_terms):
     return result
 
 
-# compare the versions replace compare_environment
 def compare_environment(team_env, master_env, jenkins_build_terms ):
-
-    """""
+    """
+    compare the versions replace compare_environment
     Return types
     1 - Matches Master
-    2 - Does not match master (red)
-    3 - branch (yellow)
-    """""
+    2 - Does not match master. Master is ahead(red)
+    3 - branch is ahead (yellow)
+    :param team_env:
+    :param master_env:
+    :param jenkins_build_terms:
+    :return:
+    """
+
     result = 0
     team_hash = team_env['version'].split('-')[-1]
     master_hash = master_env['version'].split('-')[-1]
+    service_name = team_env['servicename'].replace('_','-')
+    team_branch_name = team_env['version'].replace('_','-').split('-')[1:-1]
+    master_branch_name = master_env['version'].replace('_','-').split('-')[1:-1]
 
     if len(team_hash) == 7 and len(master_hash) == 7:
         if team_hash == master_hash:
+            # if commit hash match result (green)
             result = 1
+        elif len(team_branch_name) > 0:
+            # if a sub team branch exist and is currently deployed in the dev environment (yellow)
+            result = 3
         else:
             if team_env['build_date'] and master_env['build_date']:
-                team_time = time.strptime(team_env['build_date'], "%Y-%m-%dT%H:%M:%S+00:00")
-                master_time = time.strptime(master_env['build_date'], "%Y-%m-%dT%H:%M:%S+00:00")
-                if team_time > master_time:
-                    # if team commit time newer than master commit time (yellow)
-                    result = 3
+                # if build dates are available for both sections
+                if compare_bb_commit_parents(service_name, team_hash, master_hash):
+                    result = 1
                 else:
-                    # master commit time is newer (red)
-                    result = 2
+                    # compare build time between two environment
+                    result = compare_build_time(team_env, master_env)
             else:
                 # if build date does not exist for either or both team/master service (red)
                 result = 2
-    elif len(team_hash) == 7 or len(master_hash) == 7:
-        # if one is jenkin build number and other one is bitbucket hash
+    elif (len(team_hash) == 7) ^ (len(master_hash) == 7):
+        # if one is jenkin build number or other one is bitbucket hash (red) but not both
         result = 2
+
     elif 'master' in master_env['version'] and 'master' in team_env['version']:
-        # only jenkin build master on mutiple environment (not bitbucket way)
+        # if hash len is not 7 for both master and team
+        # that means jenkin build master on both prod and dev comparison environment (not bitbucket way)
         result = jenkins_compare_environment(team_env['version'], master_env['version'], jenkins_build_terms)
     else:
+        # all other scenarios
         result = 2
 
     logging.debug("Bitbucket comparing %s and %s result is %s" % (team_env['version'], master_env['version'], result))

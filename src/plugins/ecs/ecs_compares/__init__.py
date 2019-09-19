@@ -123,7 +123,7 @@ def compare_bb_commit_parents(repo_name,commit_hash, compare_hash):
     api_response = requests.get(bb_api_url, headers=headers).json()
 
     for parent in api_response['parents']:
-        if parent['hash'] == compare_hash:
+        if parent['hash'][0:7] == compare_hash:
             return True
     else:
         return False
@@ -204,7 +204,7 @@ def compare_environment(team_env, master_env, jenkins_build_terms ):
         else:
             if team_env['build_date'] and master_env['build_date']:
                 # if build dates are available for both sections
-                if compare_bb_commit_parents(service_name, team_hash, master_hash) or compare_bb_commit_parents(service_name, master_hash, team_hash):
+                if compare_bb_commit_parents(service_name, team_hash, master_hash):
                     result = 1
                 else:
                     # compare build time between two environment

@@ -116,13 +116,13 @@ def compare_bb_commit_parents(repo_name,commit_hash, compare_hash):
     """
     api_token = get_bb_credential()
     bb_api_url="https://api.bitbucket.org/2.0/repositories/signiant/{0}/commit/{1}".format(repo_name, commit_hash)
-
+    print(repo_name, commit_hash,bb_api_url )
     headers = dict()
     headers['Authorization'] = "Bearer {0}".format(api_token)
     headers['Content-Type'] = 'application/json'
     api_response = requests.get(bb_api_url, headers=headers)
 
-
+    print(api_response)
     if api_response.status_code == 200:
         api_response = api_response.json()
         for parent in api_response['parents']:
@@ -199,6 +199,11 @@ def compare_environment(team_env, master_env, jenkins_build_terms ):
     service_name = team_env['servicename'].replace('_','-')
     team_branch_name = team_env['version'].replace('_','-').split('-')[1:-1]
     master_branch_name = master_env['version'].replace('_','-').split('-')[1:-1]
+
+    # replace signiant-installer-service dash to underscore
+    # if there are more name changes in the future a seperate functions can be created
+    if service_name == "signiant-installer-service":
+        service_name = service_name.replace('-','_')
 
     if len(team_hash) == 7 and len(master_hash) == 7:
         if team_hash == master_hash:

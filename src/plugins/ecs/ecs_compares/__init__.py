@@ -116,13 +116,11 @@ def compare_bb_commit_parents(repo_name,commit_hash, compare_hash):
     """
     api_token = get_bb_credential()
     bb_api_url="https://api.bitbucket.org/2.0/repositories/signiant/{0}/commit/{1}".format(repo_name, commit_hash)
-    print(repo_name, commit_hash,bb_api_url )
     headers = dict()
     headers['Authorization'] = "Bearer {0}".format(api_token)
     headers['Content-Type'] = 'application/json'
     api_response = requests.get(bb_api_url, headers=headers)
 
-    print(api_response)
     if api_response.status_code == 200:
         api_response = api_response.json()
         for parent in api_response['parents']:

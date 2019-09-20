@@ -125,7 +125,7 @@ def compare_bb_commit_parents(repo_name,commit_hash, compare_hash):
     if api_response.status_code == 200:
         api_response = api_response.json()
         for parent in api_response['parents']:
-            if parent['hash'] == compare_hash:
+            if parent['hash'][0:7] == compare_hash:
                 return True
             else:
                 return False

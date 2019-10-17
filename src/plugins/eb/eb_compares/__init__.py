@@ -81,17 +81,79 @@ def eb_check_versions(region_name, env_array, role_arn, team_name):
                         records = eb_route53_session.list_resource_record_sets(HostedZoneId=current_zone_id,
                                                                                StartRecordName=current_dns_name,
                                                                                StartRecordType='A')
-
-                        activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
+                        if 'AliasTarget' in records['ResourceRecordSets'][0]:
+                            activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
+                            ga_enabled = False
+                        elif 'ResourceRecords' in records['ResourceRecordSets'][0]:
+                            ip_list = [records['ResourceRecordSets'][0]['ResourceRecords'][0]['Value'], records['ResourceRecordSets'][0]['ResourceRecords'][1]['Value']]
+                            endpoint_load_balancer_arn = get_global_accelerators(ip_list)
+                            ga_enabled = True
+                            try:
+                                eb_elb_session = mysession.client('elbv2')
+                                load_balancer = eb_elb_session.describe_load_balancers(
+                                    LoadBalancerArns=[endpoint_load_balancer_arn])
+                                load_balancer_dns = load_balancer['LoadBalancers'][0]['DNSName']
+                            except Exception as e:
+                                print(("elbv2 call error " + str(e)))
+                                print("error end")
 
                     except Exception as e:
                         print(("Route53 call error "+str(e)))
+                        print("error end")
 
-                    if activeLoadBalancer:
-                        if env['EndpointURL'].lower() in activeLoadBalancer.lower() and env['Health'] == "Green":
-                                appversions.append(c_appversion)
+                    if ga_enabled:
+                        if load_balancer_dns:
+                            if env['EndpointURL'].lower() in load_balancer_dns.lower() and env['Health'] == "Green":
+                                    appversions.append(c_appversion)
+                    else:
+                        if activeLoadBalancer:
+                            if env['EndpointURL'].lower() in activeLoadBalancer.lower() and env['Health'] == "Green":
+                                    appversions.append(c_appversion)
+
 
     return appversions
+
+
+def get_global_accelerators(ip_list):
+    """find corresponding global accelerator end points id when given two IP addresses as list from Route53 record set
+    no pagination at this point"""
+    try:
+        my_session = boto3.session.Session(region_name="us-west-2")
+        globalaccelerator = my_session.client('globalaccelerator')
+        accelerator_list = globalaccelerator.list_accelerators()
+    except Exception as e:
+        print("Could not connect to AWS Global Accelerator: %s" % str(e))
+    try:
+        for accelerator in accelerator_list['Accelerators']:
+            if set(accelerator['IpSets'][0]['IpAddresses']) == set(ip_list):
+                matching_accelerator = accelerator
+                break
+    except:
+        print("Error getting details from AWS Global Accelerator")
+
+    if matching_accelerator:
+        accelerator_arn = matching_accelerator['AcceleratorArn']
+        try:
+            listeners = globalaccelerator.list_listeners(AcceleratorArn=accelerator_arn)
+            listener_arn = listeners['Listeners'][0]['ListenerArn']
+            endpoint_groups = globalaccelerator.list_endpoint_groups(ListenerArn=listener_arn)
+        except Exception as e:
+            print("Could not connect to AWS Global Accelerator: %s" % str(e))
+            return "error"
+
+        try:
+            for endpoint_group in endpoint_groups['EndpointGroups']:
+                if endpoint_group['TrafficDialPercentage'] == 100:
+                    for endpoint in endpoint_group['EndpointDescriptions']:
+                        if endpoint['Weight'] > 0:
+                            live_load_balancer_arn = endpoint['EndpointId']
+                            return live_load_balancer_arn
+        except:
+            print("Missing endpoint gropus")
+
+    return "no valid load balancer arn"
+
+
 
 
 # version print out for eb environments

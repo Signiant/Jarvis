@@ -87,6 +87,8 @@ def eb_check_versions(region_name, env_array, role_arn, team_name):
                         elif 'ResourceRecords' in records['ResourceRecordSets'][0]:
                             ip_list = [records['ResourceRecordSets'][0]['ResourceRecords'][0]['Value'], records['ResourceRecordSets'][0]['ResourceRecords'][1]['Value']]
                             endpoint_load_balancer_arn = get_global_accelerators(ip_list)
+                            if not endpoint_load_balancer_arn:
+                                continue
                             ga_enabled = True
                             try:
                                 eb_elb_session = mysession.client('elbv2')
@@ -117,6 +119,7 @@ def eb_check_versions(region_name, env_array, role_arn, team_name):
 def get_global_accelerators(ip_list):
     """find corresponding global accelerator end points id when given two IP addresses as list from Route53 record set
     no pagination at this point"""
+    matching_accelerator = ""
     try:
         my_session = boto3.session.Session(region_name="us-west-2")
         globalaccelerator = my_session.client('globalaccelerator')
@@ -151,7 +154,7 @@ def get_global_accelerators(ip_list):
         except:
             print("Missing endpoint gropus")
 
-    return "no valid load balancer arn"
+    return False
 
 
 

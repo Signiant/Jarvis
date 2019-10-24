@@ -136,14 +136,37 @@ def main(text):
                             records = r.list_resource_record_sets(HostedZoneId=app['HostedZoneId'],
                                                                   StartRecordName=app['DNSRecord'], StartRecordType='A')
 
-                            activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
+                            if 'AliasTarget' in records['ResourceRecordSets'][0]:
+                                activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
+                                ga_enabled = False
+                            elif 'ResourceRecords' in records['ResourceRecordSets'][0]:
+                                ip_list = [records['ResourceRecordSets'][0]['ResourceRecords'][0]['Value'],
+                                           records['ResourceRecordSets'][0]['ResourceRecords'][1]['Value']]
+                                endpoint_load_balancer_arn = get_global_accelerators(ip_list)
+                                if not endpoint_load_balancer_arn:
+                                    continue
+                                ga_enabled = True
+                                try:
+                                    eb_elb_session = session.client('elbv2')
+                                    load_balancer = eb_elb_session.describe_load_balancers(
+                                        LoadBalancerArns=[endpoint_load_balancer_arn])
+                                    load_balancer_dns = load_balancer['LoadBalancers'][0]['DNSName']
+                                except Exception as e:
+                                    print(("elbv2 call error " + str(e)))
+
                         except:
                             pass
+
             for env in environments:
                 live = ""
-                if activeLoadBalancer != None:
-                    if env['EndpointURL'].lower() in activeLoadBalancer.lower():
-                        live = ":live-environment:"
+                if ga_enabled:
+                    if load_balancer_dns:
+                        if env['EndpointURL'].lower() in load_balancer_dns.lower():
+                            live = ":live-environment:"
+                else:
+                    if activeLoadBalancer:
+                        if env['EndpointURL'].lower() in activeLoadBalancer.lower():
+                            live = ":live-environment:"
                 status = ":healthy-environment:"
                 health = env['Health']
                 if health == 'Yellow':
@@ -267,14 +290,36 @@ def main(text):
                             records = r.list_resource_record_sets(HostedZoneId=app['HostedZoneId'],
                                                                   StartRecordName=app['DNSRecord'], StartRecordType='A')
 
-                            activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
+                            if 'AliasTarget' in records['ResourceRecordSets'][0]:
+                                activeLoadBalancer = records['ResourceRecordSets'][0]['AliasTarget']['DNSName']
+                                ga_enabled = False
+                            elif 'ResourceRecords' in records['ResourceRecordSets'][0]:
+                                ip_list = [records['ResourceRecordSets'][0]['ResourceRecords'][0]['Value'],
+                                           records['ResourceRecordSets'][0]['ResourceRecords'][1]['Value']]
+                                endpoint_load_balancer_arn = get_global_accelerators(ip_list)
+                                if not endpoint_load_balancer_arn:
+                                    continue
+                                ga_enabled = True
+                                try:
+                                    eb_elb_session = session.client('elbv2')
+                                    load_balancer = eb_elb_session.describe_load_balancers(
+                                        LoadBalancerArns=[endpoint_load_balancer_arn])
+                                    load_balancer_dns = load_balancer['LoadBalancers'][0]['DNSName']
+                                except Exception as e:
+                                    print(("elbv2 call error " + str(e)))
+
                         except:
                             pass
             for env in environments:
                 live = ""
-                if activeLoadBalancer != None:
-                    if env['EndpointURL'].lower() in activeLoadBalancer.lower():
-                        live = ":live-environment:"
+                if ga_enabled:
+                    if load_balancer_dns:
+                        if env['EndpointURL'].lower() in load_balancer_dns.lower():
+                            live = ":live-environment:"
+                else:
+                    if activeLoadBalancer:
+                        if env['EndpointURL'].lower() in activeLoadBalancer.lower():
+                            live = ":live-environment:"
                 status = ":healthy-environment:"
                 health = env['Health']
                 if health == 'Yellow':
@@ -502,6 +547,47 @@ def eval_args(args,regionList):
             return 0
     else:
         return 0
+
+
+def get_global_accelerators(ip_list):
+    """find corresponding global accelerator end points id when given two IP addresses as list from Route53 record set
+    no pagination at this point"""
+    matching_accelerator = ""
+    try:
+        my_session = boto3.session.Session(region_name="us-west-2")
+        globalaccelerator = my_session.client('globalaccelerator')
+        accelerator_list = globalaccelerator.list_accelerators()
+    except Exception as e:
+        print("Could not connect to AWS Global Accelerator: %s" % str(e))
+    try:
+        for accelerator in accelerator_list['Accelerators']:
+            if set(accelerator['IpSets'][0]['IpAddresses']) == set(ip_list):
+                matching_accelerator = accelerator
+                break
+    except:
+        print("Error getting details from AWS Global Accelerator")
+
+    if matching_accelerator:
+        accelerator_arn = matching_accelerator['AcceleratorArn']
+        try:
+            listeners = globalaccelerator.list_listeners(AcceleratorArn=accelerator_arn)
+            listener_arn = listeners['Listeners'][0]['ListenerArn']
+            endpoint_groups = globalaccelerator.list_endpoint_groups(ListenerArn=listener_arn)
+        except Exception as e:
+            print("Could not connect to AWS Global Accelerator: %s" % str(e))
+            return "error"
+
+        try:
+            for endpoint_group in endpoint_groups['EndpointGroups']:
+                if endpoint_group['TrafficDialPercentage'] == 100:
+                    for endpoint in endpoint_group['EndpointDescriptions']:
+                        if endpoint['Weight'] > 0:
+                            live_load_balancer_arn = endpoint['EndpointId']
+                            return live_load_balancer_arn
+        except:
+            print("Missing endpoint gropus")
+
+    return False
 
 
 # get the dev account role for specified account_name

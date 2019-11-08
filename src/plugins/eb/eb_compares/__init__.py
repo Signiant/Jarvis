@@ -190,20 +190,20 @@ def compare_environment(team_env,master_env, j_tags):
 
     """""
     Return types
-    1 - Matches Master
-    2 - Does not match master
-    3 - branch
+    1 - Matches Master (green)
+    2 - Does not match master, but branch have 'master' in it's name instead (red)
+    3 - branch (yellow)
     """""
 
     # Assume branch, unless we find master
     result = 3
 
-    if ('master' in master_env):
-        if team_env == master_env:
-            result = 1
-        else:
-            if ('master' in team_env):
-                result = 2
+    if team_env == master_env:
+        result = 1
+    else:
+        if 'master' in team_env:
+            result = 2
+
 
     # print " MATCH IS: "+team_env +" == " + master_env+" ==> "+str(result)
 

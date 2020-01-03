@@ -179,3 +179,4 @@ The `Applications` key at the same level as the `Accounts` key is the `default a
 	}
 }
 ```
+The s3 bucket store the aws.config is under ```s3://jenkins-user-bucket/Jarvis/aws.config```

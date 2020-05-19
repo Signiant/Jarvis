@@ -358,8 +358,8 @@ def lambda_compare_master_team(t_array, m_array, cached_array, jenkins_build_tag
     print("check")
     print(t_array)
     print(m_array)
-    for service_name in t_array:
-        if service_name in m_array:
+    for service_name in m_array:
+        if service_name in t_array:
             amatch = compare_environment(t_array[service_name], m_array[service_name])
 
             print("finish compare {0}".format(amatch))
@@ -387,7 +387,20 @@ def lambda_compare_master_team(t_array, m_array, cached_array, jenkins_build_tag
                              "slackchannel": "",
                              "pluginname": "lambda"
                              })
+        else:
+            ecs_master_version_entry = "ver: " + m_array[service_name]['bb_hash']
 
+            ecs_data.append({"master_env": m_array[service_name]['servicename'],
+                             "master_version": ecs_master_version_entry,
+                             "master_updateddate": "",
+                             "team_env": "need to take a look",
+                             "team_version": "place_holder_version",
+                             "team_updateddate": "",
+                             "Match": 2, "mastername": 'prod',
+                             "regionname": "place_holder_version",
+                             "slackchannel": "",
+                             "pluginname": "lambda"
+                             })
         compared_array.update({'lambda service': ecs_data})
 
     print("compare done")

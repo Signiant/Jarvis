@@ -376,10 +376,10 @@ def lambda_compare_master_team(t_array, m_array, cached_array, jenkins_build_tag
             ecs_team_version_entry = "ver: " + t_array[service_name]['bb_hash']
 
             print("add together?")
-            ecs_data.append({"master_env": m_array[service_name]['servicename'],
+            ecs_data.append({"master_env": m_array[service_name]['lambda_name'],
                              "master_version": ecs_master_version_entry,
                              "master_updateddate": "",
-                             "team_env": t_array[service_name]['servicename'],
+                             "team_env": t_array[service_name]['lambda_name'],
                              "team_version": ecs_team_version_entry,
                              "team_updateddate": "",
                              "Match": amatch, "mastername": 'prod',
@@ -390,10 +390,10 @@ def lambda_compare_master_team(t_array, m_array, cached_array, jenkins_build_tag
         else:
             ecs_master_version_entry = "ver: " + m_array[service_name]['bb_hash']
 
-            ecs_data.append({"master_env": m_array[service_name]['servicename'],
+            ecs_data.append({"master_env": m_array[service_name]['lambda_name'],
                              "master_version": ecs_master_version_entry,
                              "master_updateddate": "",
-                             "team_env": "need to take a look",
+                             "team_env": "lambda-got-specific-name",
                              "team_version": "place_holder_version",
                              "team_updateddate": "",
                              "Match": 2, "mastername": 'prod',

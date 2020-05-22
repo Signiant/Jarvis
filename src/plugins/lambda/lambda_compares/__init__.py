@@ -39,7 +39,7 @@ def ecs_check_versions(region_name,role_arn):
             # print(lambda_func)
             lambda_data = extract_tag_env_var(client, lambda_func,region_name)
             if lambda_data:
-                service_versions_dict[lambda_data['servicename']]=lambda_data
+                service_versions_dict[lambda_data['lambda_name']]=lambda_data
 
     print("service {0} {1}".format(len(service_versions_dict), service_versions_dict))
     return service_versions_dict
@@ -66,21 +66,27 @@ def extract_tag_env_var(lambda_client,  lambda_function, region):
         print(lambda_function['FunctionName'])
         print(tag_list['Tags'])
         if not any(x in lambda_function['FunctionName'] for x in ('iot-connectivity-event-processor','signiant-communication-service-iot-authorizer','Jarvis')):
-            if tag_list['Tags']['signiant-build-tag'] != "no-build-tag":
-                lambda_data['servicename']= tag_list['Tags']['signiant-service']
-                lambda_data['regionname'] = region
-                lambda_data['environment_code_name']=tag_list['Tags']['signiant-environment']
-                lambda_data['lambda_name']=lambda_function['FunctionName']
 
+            lambda_data['servicename']= tag_list['Tags']['signiant-service']
+            lambda_data['regionname'] = region
+            lambda_data['environment_code_name']=tag_list['Tags']['signiant-environment']
+            lambda_data['lambda_name']=lambda_function['FunctionName']
+
+            if tag_list['Tags']['signiant-build-tag'] != "no-build-tag":
                 if len(tag_list['Tags']['signiant-build-tag'].split())==2:
                     bb_pipe_num = tag_list['Tags']['signiant-build-tag'].split()[1]
                     lambda_data['pipeline_num'] = bb_pipe_num
+                    lambda_data['bb_hash'] = get_bb_hash(tag_list['Tags']['signiant-service'], bb_pipe_num)
                 else:
                     # no proper signiant-build-tag under tag
-                    return False
+                    lambda_data['pipeline_num'] = "no-proper-tag-num"
+                    lambda_data['bb_hash'] = "no-proper-tag-hash"
 
-                lambda_data['bb_hash']= get_bb_hash(tag_list['Tags']['signiant-service'],bb_pipe_num)
-                return lambda_data
+            else:
+                lambda_data['pipeline_num'] = "no-build-tag-num"
+                lambda_data['bb_hash'] = "no-build-tag-hash"
+
+            return lambda_data
     else:
         # not a prod lambda
         return False
@@ -393,7 +399,7 @@ def lambda_compare_master_team(t_array, m_array, cached_array, jenkins_build_tag
             ecs_data.append({"master_env": m_array[service_name]['lambda_name'],
                              "master_version": ecs_master_version_entry,
                              "master_updateddate": "",
-                             "team_env": "lambda-got-specific-name",
+                             "team_env": "in-prod-not-in-dev",
                              "team_version": "place_holder_version",
                              "team_updateddate": "",
                              "Match": 2, "mastername": 'prod',

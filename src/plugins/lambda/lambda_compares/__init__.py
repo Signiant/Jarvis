@@ -320,7 +320,7 @@ def build_compare_words(lookup, compareto, jenkin_build_terms):
     return result
 
 
-def get_build_url(service_name, bb_pipline_num, bb_hash):
+def get_build_url(service_name, bb_hash):
     """
     compare the service name to links in the superjenkins_data
     set the build_url when a url contains words matching the lookup service name
@@ -333,7 +333,7 @@ def get_build_url(service_name, bb_pipline_num, bb_hash):
     """
     the_url = ""
 
-    the_url = "https://bitbucket.org/signiant/{0}/commits/{1}".format(service_name,bb_pipline_num)
+    the_url = "https://bitbucket.org/signiant/{0}/commits/{1}".format(service_name,bb_hash)
 
     # build up url for slack display
     if the_url:
@@ -383,8 +383,8 @@ def lambda_compare_master_team(t_array, m_array, cached_array, jenkins_build_tag
             #   and not a dev branch get the build
             if amatch == 2:
                 print(m_array[service_name])
-                ecs_master_version_entry = get_build_url( m_array[service_name]['servicename'], m_array[service_name]['pipeline_num'],
-                                                         m_array[service_name]['bb_hash'])
+                ecs_master_version_entry = get_build_url( m_array[service_name]['servicename'],
+                                                          m_array[service_name]['bb_hash'])
 
             else:
                 ecs_master_version_entry = "ver: " + m_array[service_name]['bb_hash']

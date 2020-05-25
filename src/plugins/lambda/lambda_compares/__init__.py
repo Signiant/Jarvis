@@ -409,7 +409,7 @@ def lambda_compare_master_team(t_array, m_array, cached_array, jenkins_build_tag
             ecs_data.append({"master_env": m_array[service_name]['lambda_name'],
                              "master_version": ecs_master_version_entry,
                              "master_updateddate": "",
-                             "team_env": "lambda-prod-not-in-dev",
+                             "team_env": "lambda-in-prod-not-in-dev",
                              "team_version": "version not avaliable",
                              "team_updateddate": "",
                              "Match": 2, "mastername": 'prod',

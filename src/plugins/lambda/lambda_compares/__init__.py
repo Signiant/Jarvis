@@ -6,7 +6,7 @@ import requests
 
 
 # get ecs data from boto call
-def ecs_check_versions(region_name,role_arn):
+def ecs_check_versions(region_name,role_arn,env_name):
 
     service_versions_dict = {}
     awsKeyId = None
@@ -39,7 +39,9 @@ def ecs_check_versions(region_name,role_arn):
             # print(lambda_func)
             lambda_data = extract_tag_env_var(client, lambda_func,region_name)
             if lambda_data:
-                service_versions_dict[lambda_data['lambda_name']]=lambda_data
+                # print(env_name, lambda_data['environment_code_name'])
+                if lambda_data['environment_code_name'] == env_name:
+                    service_versions_dict[lambda_data['servicename']]=lambda_data
 
     print("service {0} {1}".format(len(service_versions_dict), service_versions_dict))
     return service_versions_dict
@@ -65,7 +67,7 @@ def extract_tag_env_var(lambda_client,  lambda_function, region):
         # print(tag_list['Tags']['signiant-build-tag'])
         print(lambda_function['FunctionName'])
         print(tag_list['Tags'])
-        if not any(x in lambda_function['FunctionName'] for x in ('iot-connectivity-event-processor','signiant-communication-service-iot-authorizer','Jarvis')):
+        if not any(x in lambda_function['FunctionName'] for x in ('iot-connectivity-event-processor','signiant-communication-service-iot-authorizer','Jarvis','enterprise-mike-nodejs-lambda-promo')):
 
             lambda_data['servicename']= tag_list['Tags']['signiant-service']
             lambda_data['regionname'] = region
@@ -73,14 +75,22 @@ def extract_tag_env_var(lambda_client,  lambda_function, region):
             lambda_data['lambda_name']=lambda_function['FunctionName']
 
             if tag_list['Tags']['signiant-build-tag'] != "no-build-tag":
-                if len(tag_list['Tags']['signiant-build-tag'].split())==2:
-                    bb_pipe_num = tag_list['Tags']['signiant-build-tag'].split()[1]
+                build_tag_list=tag_list['Tags']['signiant-build-tag'].split()
+                if len(build_tag_list)==2:
+                    bb_pipe_num = build_tag_list[1]
                     lambda_data['pipeline_num'] = bb_pipe_num
                     lambda_data['bb_hash'] = get_bb_hash(tag_list['Tags']['signiant-service'], bb_pipe_num)
+                elif len(build_tag_list)==1 and build_tag_list[0].isdigit():
+                    # arbitrary max pipeline number less than 9000
+                    bb_pipe_num = build_tag_list[0]
+                    lambda_data['pipeline_num'] = bb_pipe_num
+                    lambda_data['bb_hash'] = get_bb_hash(tag_list['Tags']['signiant-service'], bb_pipe_num)
+                    print("unique number tag")
                 else:
                     # no proper signiant-build-tag under tag
                     lambda_data['pipeline_num'] = "no-proper-tag-num"
                     lambda_data['bb_hash'] = "no-proper-tag-hash"
+                    print("still no proper tag")
 
             else:
                 lambda_data['pipeline_num'] = "no-build-tag-num"
@@ -415,12 +425,13 @@ def lambda_compare_master_team(t_array, m_array, cached_array, jenkins_build_tag
 
 # main ecs plugin function
 def main_ecs_check_versions(master_array, team_array, jenkins_build_tags, superjenkins_data, team_exclusion_list):
-
-    master_plugin_data = ecs_check_versions(master_array['region_name'],master_array['RoleArn'])
+    print("team array")
+    print(team_array['environment_code_name'])
+    master_plugin_data = ecs_check_versions(master_array['region_name'],master_array['RoleArn'],master_array['environment_code_name'])
 
     if master_plugin_data:
 
-        team_plugin_data = ecs_check_versions(team_array['region_name'], team_array['RoleArn'])
+        team_plugin_data = ecs_check_versions(team_array['region_name'], team_array['RoleArn'],team_array['environment_code_name'])
 
         print('master_plugin_data')
         print(master_plugin_data)

@@ -123,7 +123,7 @@ def get_bb_hash(repo, pipe_num):
         # if api to specific repo cannot be verified set it to false at moment
         print("bitbucket api 404 response {0} {1}".format(repo, pipe_num))
         print(api_response.json())
-        return "None"
+        return "Not_Found"
 
 
 def get_versions_from_image(session,region_name,image, slack_channel, env_code_name, service_versions_list):
@@ -333,7 +333,7 @@ def get_build_url(service_name, bb_pipline_num, bb_hash):
     """
     the_url = ""
 
-    the_url = "https://bitbucket.org/signiant/{0}/addon/pipelines/home#!/results/{1}".format(service_name,bb_pipline_num)
+    the_url = "https://bitbucket.org/signiant/{0}/commits/{1}".format(service_name,bb_pipline_num)
 
     # build up url for slack display
     if the_url:
@@ -409,8 +409,8 @@ def lambda_compare_master_team(t_array, m_array, cached_array, jenkins_build_tag
             ecs_data.append({"master_env": m_array[service_name]['lambda_name'],
                              "master_version": ecs_master_version_entry,
                              "master_updateddate": "",
-                             "team_env": "in-prod-not-in-dev",
-                             "team_version": "place_holder_version",
+                             "team_env": "lambda-prod-not-in-dev",
+                             "team_version": "version not avaliable",
                              "team_updateddate": "",
                              "Match": 2, "mastername": 'prod',
                              "regionname": "place_holder_version",

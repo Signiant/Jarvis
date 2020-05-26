@@ -376,7 +376,8 @@ def lambda_compare_master_team(t_array, m_array):
                                                           m_array[service_name]['bb_hash'])
 
             else:
-                lambda_master_version_entry = "ver: " + m_array[service_name]['bb_hash']
+                lambda_master_version_entry = get_build_url( m_array[service_name]['servicename'],
+                                                          m_array[service_name]['bb_hash'])
 
             lambda_team_version_entry = "ver: " + t_array[service_name]['bb_hash']
 
@@ -398,7 +399,7 @@ def lambda_compare_master_team(t_array, m_array):
                              "master_version": lambda_master_version_entry,
                              "master_updateddate": "",
                              "team_env": "Missing",
-                             "team_version": "version not avaliable",
+                             "team_version": "version not available",
                              "team_updateddate": "",
                              "Match": 2, "mastername": 'prod',
                              "regionname": "place_holder_version",

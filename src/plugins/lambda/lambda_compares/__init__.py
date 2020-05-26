@@ -34,12 +34,9 @@ def lambda_check_versions(region_name,role_arn,env_name,exclude_list,mapping_lis
         print(("Key " + e + "not found"))
 
     for lambda_funcs in lambda_iterator:
-        print(lambda_funcs)
         for lambda_func in lambda_funcs['Functions']:
-            # print(lambda_func)
             lambda_data = extract_tag_env_var(client, lambda_func,region_name,exclude_list,mapping_list)
             if lambda_data:
-                # print(env_name, lambda_data['environment_code_name'])
                 if lambda_data['environment_code_name'] == env_name:
                     service_versions_dict[lambda_data['servicename']]=lambda_data
 
@@ -64,15 +61,9 @@ def extract_tag_env_var(lambda_client,lambda_function, region,exclude_list,mappi
     lambda_data={}
     required_tags = ('signiant-environment','signiant-product', 'signiant-owner', 'signiant-service','signiant-build-tag')
     if all(k in tag_list['Tags'] for k in required_tags):
-        # print(tag_list['Tags']['signiant-build-tag'])
-        print(lambda_function['FunctionName'])
-        print(tag_list['Tags'])
-        print(exclude_list)
+        # check if the service got all above tags
         if not any(x in lambda_function['FunctionName'] for x in exclude_list):
-            print(tag_list['Tags']['signiant-service'], mapping_list)
             if tag_list['Tags']['signiant-service'] in mapping_list:
-                print("fix a problem")
-                print(tag_list['Tags']['signiant-service'])
                 #speical case mapping where the service name not match repo name in bitbucket. check aws.config map list
                 bb_repo = mapping_list[tag_list['Tags']['signiant-service']]
             else:
@@ -93,12 +84,11 @@ def extract_tag_env_var(lambda_client,lambda_function, region,exclude_list,mappi
                     bb_pipe_num = build_tag_list[0]
                     lambda_data['pipeline_num'] = bb_pipe_num
                     lambda_data['bb_hash'] = get_bb_hash(tag_list['Tags']['signiant-service'], bb_pipe_num)
-                    print("unique number tag")
+
                 else:
                     # no proper signiant-build-tag under tag
                     lambda_data['pipeline_num'] = "no-proper-tag-num"
                     lambda_data['bb_hash'] = "no-proper-tag-hash"
-                    print("still no proper tag")
 
             else:
                 lambda_data['pipeline_num'] = "no-build-tag-num"
@@ -129,8 +119,7 @@ def get_bb_hash(repo, pipe_num):
         return(api_response['target']['commit']['hash'][0:7])
     else:
         # if api to specific repo cannot be verified set it to false at moment
-        print("bitbucket api 404 response {0} {1}".format(repo, pipe_num))
-        print(api_response.json())
+        # print("bitbucket api 404 response {0} {1}".format(repo, pipe_num))
         return "Not_Found"
 
 
@@ -158,7 +147,6 @@ def get_versions_from_image(session,region_name,image, slack_channel, env_code_n
     # this section of boto3 code slows down jarvis significantly
     # because it calls on cloudformation describe_stack for every microservices
     service_stack_name = re.split('-[A-Za-z]*Task-', team_service_definition)[0]
-    # print(service_stack_name)
     cf_client = session.client("cloudformation", region_name=region_name)
     try:
         stack = cf_client.describe_stacks(StackName=service_stack_name)
@@ -239,14 +227,10 @@ def compare_environment(team_env, master_env):
     :return:
     """
 
-    result = 0
-    print("here")
     team_hash = team_env['bb_hash']
     master_hash = master_env['bb_hash']
     service_name = team_env['servicename']
-    print(service_name)
-    # team_branch_name = team_env['version'].replace('_','-').split('-')[1:-1]
-    # master_branch_name = master_env['version'].replace('_','-').split('-')[1:-1]
+
 
     # replace signiant-installer-service dash to underscore
     # if there are more name changes in the future a seperate functions can be created
@@ -379,18 +363,15 @@ def lambda_compare_master_team(t_array, m_array):
     """
     compared_array = {}
     ecs_data = []
-    print("check")
-    print(t_array)
-    print(m_array)
+
     for service_name in m_array:
         if service_name in t_array:
             amatch = compare_environment(t_array[service_name], m_array[service_name])
 
-            print("finish compare {0}".format(amatch))
             # if the match is of type 2 where environment/service is not matching prod master
             #   and not a dev branch get the build
             if amatch == 2:
-                print(m_array[service_name])
+
                 ecs_master_version_entry = get_build_url( m_array[service_name]['servicename'],
                                                           m_array[service_name]['bb_hash'])
 
@@ -399,7 +380,6 @@ def lambda_compare_master_team(t_array, m_array):
 
             ecs_team_version_entry = "ver: " + t_array[service_name]['bb_hash']
 
-            print("add together?")
             ecs_data.append({"master_env": m_array[service_name]['lambda_name'],
                              "master_version": ecs_master_version_entry,
                              "master_updateddate": "",
@@ -427,14 +407,12 @@ def lambda_compare_master_team(t_array, m_array):
                              })
         compared_array.update({'lambda service': ecs_data})
 
-    print("compare done")
     return compared_array
 
 
 # main ecs plugin function
 def main_lambda_check_versions(master_array, team_array):
-    print("team array")
-    print(team_array['environment_code_name'])
+
     m_region_name = master_array['region_name']
     m_role_arn = master_array['RoleArn']
     m_env = master_array['environment_code_name']
@@ -453,10 +431,6 @@ def main_lambda_check_versions(master_array, team_array):
 
         team_plugin_data = lambda_check_versions(t_region_name, t_role_arn,t_env,service_exclude_list,service_map_list )
 
-        print('master_plugin_data')
-        print(master_plugin_data)
-        print('team_plugin_data')
-        print(team_plugin_data)
         compared_data = lambda_compare_master_team(team_plugin_data,master_plugin_data)
 
     return compared_data

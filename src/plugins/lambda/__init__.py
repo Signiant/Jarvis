@@ -94,10 +94,7 @@ def main(text):
 
                 if master_data and team_data:
 
-
                     compared_data = lambda_compares.main_lambda_check_versions(master_data,team_data)
-                    print("still compare data")
-                    print(team_data['team_name'],compared_data )
                     attachments = compare_output.slack_payload(compared_data, team_data['team_name'])
                     return attachments
 

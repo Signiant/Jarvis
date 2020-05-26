@@ -6,10 +6,10 @@ import json
 
 
 def create_graph(graphTitle, xAxisName, xAxisData, yAxisName, yAxisData, timestamps):
-    with open(os.path.join(os.path.dirname(__file__), 'CHATURL_API_KEY')) as f:
-        chaturl_api_key = f.read().strip()
+    with open(os.path.join(os.path.dirname(__file__), 'CHARTURL_API_KEY')) as f:
+        charturl_api_key = f.read().strip()
 
-    url = "https://charturl.com/short-urls.json?api_key=" + chaturl_api_key
+    url = "https://charturl.com/short-urls.json?api_key=" + charturl_api_key
 
     headers = {
         'Content-Type': 'application/json'

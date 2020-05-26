@@ -67,14 +67,17 @@ def extract_tag_env_var(lambda_client,lambda_function, region,exclude_list,mappi
         # print(tag_list['Tags']['signiant-build-tag'])
         print(lambda_function['FunctionName'])
         print(tag_list['Tags'])
+        print(exclude_list)
         if not any(x in lambda_function['FunctionName'] for x in exclude_list):
-
+            print(tag_list['Tags']['signiant-service'], mapping_list)
             if tag_list['Tags']['signiant-service'] in mapping_list:
+                print("fix a problem")
+                print(tag_list['Tags']['signiant-service'])
                 #speical case mapping where the service name not match repo name in bitbucket. check aws.config map list
-                lambda_data['servicename'] = mapping_list[tag_list['Tags']['signiant-service']]
+                bb_repo = mapping_list[tag_list['Tags']['signiant-service']]
             else:
-                lambda_data['servicename']= tag_list['Tags']['signiant-service']
-
+                bb_repo =  tag_list['Tags']['signiant-service']
+            lambda_data['servicename'] = bb_repo
             lambda_data['regionname'] = region
             lambda_data['environment_code_name']=tag_list['Tags']['signiant-environment']
             lambda_data['lambda_name']=lambda_function['FunctionName']
@@ -84,7 +87,7 @@ def extract_tag_env_var(lambda_client,lambda_function, region,exclude_list,mappi
                 if len(build_tag_list)==2:
                     bb_pipe_num = build_tag_list[1]
                     lambda_data['pipeline_num'] = bb_pipe_num
-                    lambda_data['bb_hash'] = get_bb_hash(tag_list['Tags']['signiant-service'], bb_pipe_num)
+                    lambda_data['bb_hash'] = get_bb_hash(bb_repo, bb_pipe_num)
                 elif len(build_tag_list)==1 and build_tag_list[0].isdigit():
                     # special case where branch name does not exist in tag.
                     bb_pipe_num = build_tag_list[0]

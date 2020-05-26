@@ -186,7 +186,7 @@ def main(text):
 
         if "with" in text and len([_f for _f in text if _f]) > 6 and len([_f for _f in text if _f]) < 10:
 
-            # extract arguments from text for master and team ecs data
+            # extract arguments from text for master and team lambda data
             master_args = [_f for _f in text[:text.index("with")] if _f]
             team_args = [_f for _f in text[text.index("with") + 1:] if _f]
 
@@ -202,25 +202,15 @@ def main(text):
                         config = json.load(f)
 
                 if config:
-                    master_data = get_in_ecs_compare_data(config, master_args, master_args_eval)
-                    team_data = get_in_ecs_compare_data(config, team_args, team_args_eval)
+                    master_data = get_in_lambda_compare_data(config, master_args, master_args_eval)
+                    team_data = get_in_lambda_compare_data(config, team_args, team_args_eval)
                 else:
                     return "Config file was not loaded"
 
                 if master_data and team_data:
 
-                    # retrieves the json from super jenkins with all build link data
-                    superjenkins_data = common.get_superjenkins_data(config["General"]["script_tags"]["beginning_tag"],
-                                                                     config["General"]["script_tags"]["ending_tag"],
-                                                                     config["General"]["build_link"],
-                                                                     config["General"]["my_build_key"])
 
-                    compared_data = lambda_compares.main_ecs_check_versions(master_data,
-                                                                         team_data,
-                                                                         config["General"]["jenkins"][
-                                                                             "branch_equivalent_tags"],
-                                                                         superjenkins_data,
-                                                                         team_data['service_exclude_list'])
+                    compared_data = lambda_compares.main_lambda_check_versions(master_data,team_data)
                     print("still compare data")
                     print(team_data['team_name'],compared_data )
                     attachments = compare_output.slack_payload(compared_data, team_data['team_name'])
@@ -538,7 +528,7 @@ def tasks_get_lookup_term(text):
 
 
 # retrieve data from config files for compare
-def get_in_ecs_compare_data(config, args, args_eval):
+def get_in_lambda_compare_data(config, args, args_eval):
     result = dict()
 
     # Depending on the arguments provided the values for cluster, region and account are determined as follows...
@@ -554,7 +544,7 @@ def get_in_ecs_compare_data(config, args, args_eval):
         result['region_name'] = args[2]
         result['account'] = args[3]
 
-    for account in config['ecs']['Accounts']:
+    for account in config['lambda']['Accounts']:
         if account['AccountName'] == result['account']:
             result['RoleArn'] = account['RoleArn']
             for the_region in account['Clusters']:
@@ -563,10 +553,11 @@ def get_in_ecs_compare_data(config, args, args_eval):
                         result['cluster_name'] = account['Clusters'][the_region]['cluster_list']
                     result['task_definition_name'] = account['Clusters'][the_region]['task_only_service']
                     result['environment_code_name'] = account['Clusters'][the_region]['environment_code_name']
-                    result['service_exclude_list'] = config['ecs']['service_exclude_list']
+                    result['service_exclude_list'] = config['lambda']['service_exclude_list']
+                    result['service_mapping_list'] = config['lambda']['service_mapping_list']
                     result['team_name'] = account['Clusters'][the_region]['team_name']
     if ('environment_code_name' in result) == False:
-        for the_clusters in config['ecs']['Accounts']:
+        for the_clusters in config['lambda']['Accounts']:
             for the_region in the_clusters['Clusters']:
                 if the_region == result['region_name']:
                     if result['account'] == the_clusters['Clusters'][the_region]['team_name']:
@@ -574,7 +565,8 @@ def get_in_ecs_compare_data(config, args, args_eval):
                             result['cluster_name'] = the_clusters['Clusters'][the_region]['cluster_list']
                         result['task_definition_name'] = account['Clusters'][the_region]['task_only_service']
                         result['environment_code_name'] = the_clusters['Clusters'][the_region]['environment_code_name']
-                        result['service_exclude_list'] = config['ecs']['service_exclude_list']
+                        result['service_exclude_list'] = config['lambda']['service_exclude_list']
+                        result['service_mapping_list'] = config['lambda']['service_mapping_list']
                         result['RoleArn'] = None
                         result['team_name'] = the_clusters['Clusters'][the_region]['team_name']
 

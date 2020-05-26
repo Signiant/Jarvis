@@ -6,7 +6,7 @@ import requests
 
 
 # get ecs data from boto call
-def ecs_check_versions(region_name,role_arn,env_name):
+def lambda_check_versions(region_name,role_arn,env_name,exclude_list,mapping_list):
 
     service_versions_dict = {}
     awsKeyId = None
@@ -37,7 +37,7 @@ def ecs_check_versions(region_name,role_arn,env_name):
         print(lambda_funcs)
         for lambda_func in lambda_funcs['Functions']:
             # print(lambda_func)
-            lambda_data = extract_tag_env_var(client, lambda_func,region_name)
+            lambda_data = extract_tag_env_var(client, lambda_func,region_name,exclude_list,mapping_list)
             if lambda_data:
                 # print(env_name, lambda_data['environment_code_name'])
                 if lambda_data['environment_code_name'] == env_name:
@@ -47,7 +47,7 @@ def ecs_check_versions(region_name,role_arn,env_name):
     return service_versions_dict
 
 
-def extract_tag_env_var(lambda_client,  lambda_function, region):
+def extract_tag_env_var(lambda_client,lambda_function, region,exclude_list,mapping_list):
     """
     At moment we only want lambda that have the following tags:
     signiant-environment
@@ -67,9 +67,14 @@ def extract_tag_env_var(lambda_client,  lambda_function, region):
         # print(tag_list['Tags']['signiant-build-tag'])
         print(lambda_function['FunctionName'])
         print(tag_list['Tags'])
-        if not any(x in lambda_function['FunctionName'] for x in ('iot-connectivity-event-processor','signiant-communication-service-iot-authorizer','Jarvis','enterprise-mike-nodejs-lambda-promo')):
+        if not any(x in lambda_function['FunctionName'] for x in exclude_list):
 
-            lambda_data['servicename']= tag_list['Tags']['signiant-service']
+            if tag_list['Tags']['signiant-service'] in mapping_list:
+                #speical case mapping where the service name not match repo name in bitbucket. check aws.config map list
+                lambda_data['servicename'] = mapping_list[tag_list['Tags']['signiant-service']]
+            else:
+                lambda_data['servicename']= tag_list['Tags']['signiant-service']
+
             lambda_data['regionname'] = region
             lambda_data['environment_code_name']=tag_list['Tags']['signiant-environment']
             lambda_data['lambda_name']=lambda_function['FunctionName']
@@ -81,7 +86,7 @@ def extract_tag_env_var(lambda_client,  lambda_function, region):
                     lambda_data['pipeline_num'] = bb_pipe_num
                     lambda_data['bb_hash'] = get_bb_hash(tag_list['Tags']['signiant-service'], bb_pipe_num)
                 elif len(build_tag_list)==1 and build_tag_list[0].isdigit():
-                    # arbitrary max pipeline number less than 9000
+                    # special case where branch name does not exist in tag.
                     bb_pipe_num = build_tag_list[0]
                     lambda_data['pipeline_num'] = bb_pipe_num
                     lambda_data['bb_hash'] = get_bb_hash(tag_list['Tags']['signiant-service'], bb_pipe_num)
@@ -359,7 +364,7 @@ def comp_strings_charnum(string1, string2):
     return result
 
 
-def lambda_compare_master_team(t_array, m_array, cached_array, jenkins_build_tags, excluded_services=None):
+def lambda_compare_master_team(t_array, m_array):
     """
     compare master to teams
     :param t_array: the version of services in team branch
@@ -424,23 +429,31 @@ def lambda_compare_master_team(t_array, m_array, cached_array, jenkins_build_tag
 
 
 # main ecs plugin function
-def main_ecs_check_versions(master_array, team_array, jenkins_build_tags, superjenkins_data, team_exclusion_list):
+def main_lambda_check_versions(master_array, team_array):
     print("team array")
     print(team_array['environment_code_name'])
-    master_plugin_data = ecs_check_versions(master_array['region_name'],master_array['RoleArn'],master_array['environment_code_name'])
+    m_region_name = master_array['region_name']
+    m_role_arn = master_array['RoleArn']
+    m_env = master_array['environment_code_name']
+
+    t_region_name = team_array['region_name']
+    t_role_arn = team_array['RoleArn']
+    t_env = team_array['environment_code_name']
+
+    # following var are arbitrary can be from team or master. since they are universal when retrieved from aws config
+    service_exclude_list =team_array['service_exclude_list']
+    service_map_list = team_array['service_mapping_list']
+
+    master_plugin_data = lambda_check_versions(m_region_name,m_role_arn,m_env, service_exclude_list,service_map_list)
 
     if master_plugin_data:
 
-        team_plugin_data = ecs_check_versions(team_array['region_name'], team_array['RoleArn'],team_array['environment_code_name'])
+        team_plugin_data = lambda_check_versions(t_region_name, t_role_arn,t_env,service_exclude_list,service_map_list )
 
         print('master_plugin_data')
         print(master_plugin_data)
         print('team_plugin_data')
         print(team_plugin_data)
-        compared_data = lambda_compare_master_team(team_plugin_data,
-                                                master_plugin_data,
-                                                superjenkins_data,
-                                                jenkins_build_tags,
-                                                team_exclusion_list)
+        compared_data = lambda_compare_master_team(team_plugin_data,master_plugin_data)
 
     return compared_data

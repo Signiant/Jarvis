@@ -5,7 +5,7 @@ import time
 import requests
 
 
-# get ecs data from boto call
+# get lambda data from boto call
 def lambda_check_versions(region_name,role_arn,env_name,exclude_list,mapping_list):
 
     service_versions_dict = {}
@@ -133,7 +133,7 @@ def get_versions_from_image(session,region_name,image, slack_channel, env_code_n
     :return:
     """
 
-    # getting ecs service version and name
+    # getting lambda service version and name
     version_output = image['taskDefinition']['containerDefinitions'][0]['image']
     version_parsed = version_output.split("/")[-1]
     service_dot_index = version_parsed.find(':')
@@ -141,7 +141,7 @@ def get_versions_from_image(session,region_name,image, slack_channel, env_code_n
     service_version_prefix = version_parsed[0:service_dot_index]
     service_version_ending = version_parsed[(service_dot_index + 1):]
 
-    # detailed ecs service
+    # detailed lambda service
     team_service_definition = image['taskDefinition']['family']
 
     # this section of boto3 code slows down jarvis significantly
@@ -362,7 +362,7 @@ def lambda_compare_master_team(t_array, m_array):
     :return:
     """
     compared_array = {}
-    ecs_data = []
+    lambda_data = []
 
     for service_name in m_array:
         if service_name in t_array:
@@ -372,19 +372,19 @@ def lambda_compare_master_team(t_array, m_array):
             #   and not a dev branch get the build
             if amatch == 2:
 
-                ecs_master_version_entry = get_build_url( m_array[service_name]['servicename'],
+                lambda_master_version_entry = get_build_url( m_array[service_name]['servicename'],
                                                           m_array[service_name]['bb_hash'])
 
             else:
-                ecs_master_version_entry = "ver: " + m_array[service_name]['bb_hash']
+                lambda_master_version_entry = "ver: " + m_array[service_name]['bb_hash']
 
-            ecs_team_version_entry = "ver: " + t_array[service_name]['bb_hash']
+            lambda_team_version_entry = "ver: " + t_array[service_name]['bb_hash']
 
-            ecs_data.append({"master_env": m_array[service_name]['lambda_name'],
-                             "master_version": ecs_master_version_entry,
+            lambda_data.append({"master_env": m_array[service_name]['lambda_name'],
+                             "master_version": lambda_master_version_entry,
                              "master_updateddate": "",
                              "team_env": t_array[service_name]['lambda_name'],
-                             "team_version": ecs_team_version_entry,
+                             "team_version": lambda_team_version_entry,
                              "team_updateddate": "",
                              "Match": amatch, "mastername": 'prod',
                              "regionname": t_array[service_name]['regionname'],
@@ -392,10 +392,10 @@ def lambda_compare_master_team(t_array, m_array):
                              "pluginname": "lambda"
                              })
         else:
-            ecs_master_version_entry = "ver: " + m_array[service_name]['bb_hash']
+            lambda_master_version_entry = "ver: " + m_array[service_name]['bb_hash']
 
-            ecs_data.append({"master_env": m_array[service_name]['lambda_name'],
-                             "master_version": ecs_master_version_entry,
+            lambda_data.append({"master_env": m_array[service_name]['lambda_name'],
+                             "master_version": lambda_master_version_entry,
                              "master_updateddate": "",
                              "team_env": "Missing",
                              "team_version": "version not avaliable",
@@ -405,12 +405,12 @@ def lambda_compare_master_team(t_array, m_array):
                              "slackchannel": "",
                              "pluginname": "lambda"
                              })
-        compared_array.update({'lambda service': ecs_data})
+        compared_array.update({'lambda service': lambda_data})
 
     return compared_array
 
 
-# main ecs plugin function
+# main lambda plugin function
 def main_lambda_check_versions(master_array, team_array):
 
     m_region_name = master_array['region_name']

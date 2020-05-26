@@ -113,79 +113,11 @@ def about():
 
 
 def information():
-    return """This plugin returns various information about clusters and services hosted on ECS.
+    return """This plugin returns various information about Lambda compare.
     The format of queries is as follows:
     jarvis lambda regions [sendto <user or channel>]
     jarvis lambda list services <cluster> [in <region/account>] [sendto <user or channel>]
     jarvis lambda compare [<cluster>] within <region> <account> with [<cluster>] within <region> <account> [sendto <user or channel>]"""
-
-
-# list the tasks in cluster
-def get_task_list(next_token=None, cluster=None, ecs=None):
-    # Get the running tasks
-    running_tasks = []
-
-    # Get tasks in this cluster
-    query_result = ecs.list_tasks(cluster=cluster)
-
-    if 'ResponseMetadata' in query_result:
-        if 'HTTPStatusCode' in query_result['ResponseMetadata']:
-            if query_result['ResponseMetadata']['HTTPStatusCode'] == 200:
-                if 'nextToken' in query_result:
-                    running_tasks.extend(get_task_list(next_token=query_result['nextToken']))
-                else:
-                    running_tasks.extend(query_result['taskArns'])
-    return running_tasks
-
-
-def parse_tasks(task_list, lookup_term, plugin):
-    # Parse task_list and return a dict containing family:count
-    task_families = {}
-    for task in task_list:
-        family = task['taskDefinitionArn'].split("/")[-1]
-        try:
-            image = plugin.describe_task_definition(taskDefinition=family)
-        except Exception as e:
-            print(("Error could not retrieve image " + str(e)))
-            image = []
-        if image:
-            version_name = image['taskDefinition']['containerDefinitions'][0]['image'].split('/')[-1].split(':')[-1]
-            if tasks_add_not_blank(family, lookup_term):
-                if family not in task_families:
-                    task_families[family] = {}
-                    task_families[family]['count'] = 1
-                    task_families[family]['version'] = version_name
-                else:
-                    task_families[family]['count'] = task_families[family]['count'] + 1
-
-    return task_families
-
-
-def tasks_add_not_blank(theword, lookup_word):
-    if not lookup_word:
-        return True
-    else:
-        if theword.lower().find(str(lookup_word.lower())) > -1:
-            return True
-        else:
-            return False
-
-
-# check to see if tasks word in arguments
-def tasks_check_text(text):
-    for data in text:
-        if 'tasks' in data.lower().split('---'):
-            return True
-
-
-def tasks_get_lookup_term(text):
-    for data in text:
-        if 'tasks' in data.lower().split('---'):
-            text.remove(data)
-            if data.lower().split('---')[-1] == 'tasks':
-                return None
-            else:
-                return data[(data.lower().find('---') + 3):]
 
 
 # retrieve data from config files for compare

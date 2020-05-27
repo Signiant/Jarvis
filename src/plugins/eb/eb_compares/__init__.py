@@ -258,10 +258,14 @@ def compare_environment(team_version, master_version):
             result = 1
         else:
             if compare_bb_commit_parents(service_name, team_hash, master_hash):
+                # if master and team's hashes belong to the same commit parents
                 result = 1
             else:
+                # hashes are different
                 if 'master' in team_branch_name:
+                    # if master is in team name
                     result = 2
+
     elif (len(team_hash) == 7) ^ (len(master_hash) == 7):
         # if one is jenkin build number or other one is bitbucket hash (red) but not both
         result = 3

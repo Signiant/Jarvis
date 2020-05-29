@@ -418,6 +418,7 @@ def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
                          "regionname":t_array['regionname'],
                          "pluginname": "eb"
                         })
+                break
 
     # add all master applications not found to eb data output
     if not_in_team_array:
@@ -425,7 +426,7 @@ def eb_compare_master_team(tkey,m_array, cached_array, jenkins_build_tags):
             prelim_master_version = get_version_output_string(m_data['version'])
             master_version_entry = get_build_url(cached_array, m_data['build_master_tag'],
                                                  prelim_master_version, jenkins_build_tags,
-                                                 amatch, ismaster=True)
+                                                 amatch,m_data['tags'], ismaster=True)
 
             print(('master ver: %s, team ver: %s, Match %s' % (master_version_entry, "", "2")))
             eb_data.append({"master_env": m_data['environmentname'],

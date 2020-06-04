@@ -83,7 +83,7 @@ def extract_tag_env_var(lambda_client,lambda_function, region,exclude_list,mappi
                     # special case where branch name does not exist in tag.
                     bb_pipe_num = build_tag_list[0]
                     lambda_data['pipeline_num'] = bb_pipe_num
-                    lambda_data['bb_hash'] = get_bb_hash(tag_list['Tags']['signiant-service'], bb_pipe_num)
+                    lambda_data['bb_hash'] = get_bb_hash(bb_repo, bb_pipe_num)
 
                 else:
                     # no proper signiant-build-tag under tag

@@ -40,7 +40,7 @@ def lambda_check_versions(region_name,role_arn,env_name,exclude_list,mapping_lis
                 if lambda_data['environment_code_name'] == env_name:
                     service_versions_dict[lambda_data['servicename']]=lambda_data
 
-    print("service {0} {1}".format(len(service_versions_dict), service_versions_dict))
+    # print("service {0} {1}".format(len(service_versions_dict), service_versions_dict))
     return service_versions_dict
 
 

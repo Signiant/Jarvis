@@ -50,8 +50,5 @@ def extract_dynamoDB(global_table_name, query_id):
         print("Jarvis Query not found in DynamoDB")
         return False
 
-def check_exist_dynamoDB():
-    print("hello world")
-
 if __name__ == '__main__':
-    print("hello world")
+    print("hello world: use this for debug")

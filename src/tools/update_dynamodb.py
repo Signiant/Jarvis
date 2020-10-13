@@ -6,10 +6,9 @@ import json
 from datetime import datetime
 
 
-GLOBAL_TABLE_NAME="SRE_JARVIS_STORE"
 CURRENT_DATETIME=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-def update_dynamoDB(query_id, slack_data):
+def update_dynamoDB(global_table_name, query_id, slack_data):
     """
     update jarvis data to dynamoDB, seperate by queryId,
     :param query_id: query attached together by + sign
@@ -20,7 +19,7 @@ def update_dynamoDB(query_id, slack_data):
     slack_data = json.dumps(slack_data)
     session = boto3.session.Session(region_name='us-east-1')
     iam_client = session.client('dynamodb')
-    list_group_detail = iam_client.update_item(TableName=GLOBAL_TABLE_NAME,
+    list_group_detail = iam_client.update_item(TableName=global_table_name,
                                                Key={'queryId': {'S': query_id}},
                                                ExpressionAttributeNames={'#S': 'slackData','#D': 'dateTimeData'},
                                                ExpressionAttributeValues={':s': {'S': slack_data},':d': {'S': CURRENT_DATETIME}},
@@ -29,13 +28,13 @@ def update_dynamoDB(query_id, slack_data):
 
     # print(list_group_detail['ResponseMetadata'])
     if list_group_detail['ResponseMetadata']['HTTPStatusCode'] == 200:
-        print("update slackData to Database {0} successfully".format(GLOBAL_TABLE_NAME))
+        print("update slackData to Database {0} successfully".format(global_table_name))
 
 
-def extract_dynamoDB(query_id):
+def extract_dynamoDB(global_table_name, query_id):
     session = boto3.session.Session(region_name='us-east-1')
     iam_client = session.client('dynamodb')
-    get_data = iam_client.get_item(TableName=GLOBAL_TABLE_NAME,
+    get_data = iam_client.get_item(TableName=global_table_name,
                                             Key={'queryId': {'S': query_id}},
                                             ProjectionExpression='slackData,dateTimeData')
     # print(get_data)

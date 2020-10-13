@@ -40,6 +40,14 @@ def get_incoming_webhook():
             config = json.load(f)
     return config['General']["webhook_url"]
 
+# retrieve the incoming webhook
+def get_dynamodb_name():
+    config = None
+    # load config file
+    if os.path.isfile("./aws.config"):
+        with open("aws.config") as f:
+            config = json.load(f)
+    return config['General']["dynamodb_name"]
 
 def loadPlugin(pluginName):
     return imp.load_source(pluginName, os.path.join(pluginFolder, pluginName, mainFile + ".py"))
@@ -73,7 +81,7 @@ def lambda_handler(event, context):
     global slack_response_url
     slack_response_url = param_map['response_url']
     slack_response_url = urllib.parse.unquote(slack_response_url)
-
+    dynamodb_name = get_dynamodb_name()
     print(("LOG: The request came from: " + slack_channel))
     print(("LOG: The request is: " + str(text)))
     print(("LOG: The requesting user is: " + param_map['user_name']))
@@ -114,7 +122,7 @@ def lambda_handler(event, context):
             query_id = "+".join(text)
             retval = plugin.main(text)
             # update the dynamoDB with the new query
-            update_dynamodb.update_dynamoDB(query_id, retval)
+            update_dynamodb.update_dynamoDB(dynamodb_name, query_id, retval)
 
         except Exception as e:
             retval = "I'm afraid I did not understand that command. Use 'jarvis help' for available commands."
@@ -124,7 +132,7 @@ def lambda_handler(event, context):
             plugin = loadPlugin(text[0])
             query_id = "+".join(text)
             # print(query_id)
-            db_result = update_dynamodb.extract_dynamoDB(query_id)
+            db_result = update_dynamodb.extract_dynamoDB(dynamodb_name, query_id)
             if db_result:
                 retval = db_result[0]
                 #retrieve timestamp from dynamodb
@@ -132,7 +140,7 @@ def lambda_handler(event, context):
             else:
                 retval = plugin.main(text)
                 # update the dynamoDB with the new query
-                update_dynamodb.update_dynamoDB(query_id, retval)
+                update_dynamodb.update_dynamoDB(dynamodb_name, query_id, retval)
         except Exception as e:
             retval = "I'm afraid I could not run the Jarvis command with 'latest' . Use 'jarvis help' for available commands."
             print(('Error: ' + format(str(e))))

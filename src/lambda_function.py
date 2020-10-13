@@ -4,6 +4,9 @@ import requests
 import urllib.request, urllib.parse, urllib.error
 import json
 
+import sys
+sys.path.append("./tools")
+import update_dynamodb
 
 pluginFolder = "./plugins"
 mainFile = "__init__"
@@ -52,12 +55,14 @@ def _formparams_to_dict(s1):
 
 
 def lambda_handler(event, context):
+
     print(("Received event: " + json.dumps(event, indent=2)))
     if 'Records' in event:
         alert = event['Records'][0]['Sns']['Message']
         event['formparams'] = str(alert[len("{'formparams': '"):-2])
     # Lambda entry point
     param_map = _formparams_to_dict(event['formparams'])
+    query_id = param_map['text']
     text = param_map['text'].split('+')
     global query
     query = urllib.parse.unquote(" ".join(text))
@@ -72,12 +77,17 @@ def lambda_handler(event, context):
     print(("LOG: The request came from: " + slack_channel))
     print(("LOG: The request is: " + str(text)))
     print(("LOG: The requesting user is: " + param_map['user_name']))
+    get_latest = False
 
     # extract send to slack channel from args
     sendto_data = None
     if "sendto" in text:
         sendto_data = [_f for _f in text[text.index("sendto") + 1:] if _f]
         text = text[:text.index("sendto")]
+
+    if "latest" in text:
+        get_latest = True
+        text = text[:text.index("latest")]
 
     if param_map["u'token"] != incoming_token:  # Check for a valid Slack token
         retval = 'invalid incoming Slack token'
@@ -96,12 +106,35 @@ def lambda_handler(event, context):
                 plugins = plugins + "\n" + aPlugin["name"] + ": " + loadPlugin(aPlugin['name']).about()
 
             retval = 'You can use the following commands: ' + plugins + '.'
+    elif get_latest:
+        # get latest option
+        try:
+            date_time_data=""
+            plugin = loadPlugin(text[0])
+            query_id = "+".join(text)
+            retval = plugin.main(text)
+            # update the dynamoDB with the new query
+            update_dynamodb.update_dynamoDB(query_id, retval)
+
+        except Exception as e:
+            retval = "I'm afraid I did not understand that command. Use 'jarvis help' for available commands."
+            print(('Error: ' + format(str(e))))
     else:
         try:
             plugin = loadPlugin(text[0])
-            retval = plugin.main(text)
+            query_id = "+".join(text)
+            # print(query_id)
+            db_result = update_dynamodb.extract_dynamoDB(query_id)
+            if db_result:
+                retval = db_result[0]
+                #retrieve timestamp from dynamodb
+                date_time_data = db_result[1]
+            else:
+                retval = plugin.main(text)
+                # update the dynamoDB with the new query
+                update_dynamodb.update_dynamoDB(query_id, retval)
         except Exception as e:
-            retval = "I'm afraid I did not understand that command. Use 'jarvis help' for available commands."
+            retval = "I'm afraid I could not run the Jarvis command with 'latest' . Use 'jarvis help' for available commands."
             print(('Error: ' + format(str(e))))
 
     print("******************return value of slack payload*********************")
@@ -110,9 +143,9 @@ def lambda_handler(event, context):
 
     # if sendto: is in args then send jarvis message to slack channel in args
     if sendto_data:
-        send_to_slack(retval, sendto_data[0], param_map['user_name'])
+        send_to_slack(retval, sendto_data[0], param_map['user_name'],date_time_data)
     else:
-        post_to_slack(retval)
+        post_to_slack(retval, date_time_data)
 
 
 # function to send processing request message
@@ -127,10 +160,14 @@ def send_message_to_slack(val):
         print(("ephemeral_message_request error " + str(e)))
 
 
-def post_to_slack(val):
+def post_to_slack(val, date_time_data=""):
+    date_data = ""
+    if date_time_data:
+        date_data = "\nRetrieved on: "+date_time_data
+
     if isinstance(val, str):
         payload = {
-        "text": query + "\n" + val,
+        "text": query + date_data + "\n" + val,
         "response_type": "ephemeral"
         }
         r = requests.post(slack_response_url, json=payload)
@@ -143,7 +180,10 @@ def post_to_slack(val):
         r = requests.post(slack_response_url, json=payload)
 
 
-def send_to_slack(val, sendto_slack_channel, sender_address):
+def send_to_slack(val, sendto_slack_channel, sender_address, date_time_data=""):
+    date_data = ""
+    if date_time_data:
+        date_data = "\nRetrieved on: " + date_time_data
     # this gives easy access to incoming webhook
     sendto_webhook = get_incoming_webhook()
 
@@ -155,7 +195,7 @@ def send_to_slack(val, sendto_slack_channel, sender_address):
     if isinstance(val, str):
         try:
             payload = {
-                "text": query + "\n" + val,
+                "text": query + date_data + "\n" + val,
                 "response_type": "ephemeral"
             }
             r = requests.post(slack_response_url, json=payload)

@@ -1,13 +1,7 @@
 import boto3
 import json
-from datetime import datetime
-import dateutil.tz
 
-
-EST = dateutil.tz.gettz('US/Eastern')
-CURRENT_DATETIME=datetime.now(EST).strftime('%Y-%m-%d %H:%M:%S')
-
-def update_dynamoDB(global_table_name, query_id, slack_data):
+def update_dynamoDB(global_table_name, query_id, slack_data, current_date):
     """
     update jarvis data to dynamoDB, seperate by queryId,
     :param query_id: query attached together by + sign
@@ -21,7 +15,7 @@ def update_dynamoDB(global_table_name, query_id, slack_data):
     list_group_detail = iam_client.update_item(TableName=global_table_name,
                                                Key={'queryId': {'S': query_id}},
                                                ExpressionAttributeNames={'#S': 'slackData','#D': 'dateTimeData'},
-                                               ExpressionAttributeValues={':s': {'S': slack_data},':d': {'S': CURRENT_DATETIME}},
+                                               ExpressionAttributeValues={':s': {'S': slack_data},':d': {'S': current_date}},
                                                ReturnValues='ALL_NEW',
                                                UpdateExpression='SET #S = :s, #D = :d')
 

@@ -3,10 +3,16 @@ import os
 import requests
 import urllib.request, urllib.parse, urllib.error
 import json
+import dateutil.tz
 
 import sys
 sys.path.append("./tools")
 import update_dynamodb
+
+from datetime import datetime
+
+EST = dateutil.tz.gettz('US/Eastern')
+CURRENT_DATETIME=datetime.now(EST).strftime('%Y-%m-%d %H:%M:%S')
 
 pluginFolder = "./plugins"
 mainFile = "__init__"
@@ -123,7 +129,7 @@ def lambda_handler(event, context):
             query_id = "+".join(text)
             retval = plugin.main(text)
             # update the dynamoDB with the new query
-            update_dynamodb.update_dynamoDB(d_table_name, query_id, retval)
+            update_dynamodb.update_dynamoDB(d_table_name, query_id, retval,CURRENT_DATETIME)
 
         except Exception as e:
             retval = "I'm afraid I did not understand that command. Use 'jarvis help' for available commands."
@@ -141,7 +147,7 @@ def lambda_handler(event, context):
             else:
                 retval = plugin.main(text)
                 # update the dynamoDB with the new query
-                update_dynamodb.update_dynamoDB(d_table_name, query_id, retval)
+                update_dynamodb.update_dynamoDB(d_table_name, query_id, retval,CURRENT_DATETIME)
         except Exception as e:
             retval = "This query not in Database. Try the command again with 'latest' at end . Use 'jarvis help' for available commands."
             print(('Error: ' + format(str(e))))

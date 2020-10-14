@@ -1,9 +1,10 @@
 import boto3
 import json
 from datetime import datetime
-from pytz import timezone
+import dateutil.tz
 
-EST = timezone('US/Eastern')
+
+EST = dateutil.tz.gettz('US/Eastern')
 CURRENT_DATETIME=datetime.now(EST).strftime('%Y-%m-%d %H:%M:%S')
 
 def update_dynamoDB(global_table_name, query_id, slack_data):

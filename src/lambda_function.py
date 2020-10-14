@@ -143,7 +143,7 @@ def lambda_handler(event, context):
                 # update the dynamoDB with the new query
                 update_dynamodb.update_dynamoDB(d_table_name, query_id, retval)
         except Exception as e:
-            retval = "I'm afraid I could not run the Jarvis command with 'latest' . Use 'jarvis help' for available commands."
+            retval = "This query not in Database. Try the command again with 'latest' at end . Use 'jarvis help' for available commands."
             print(('Error: ' + format(str(e))))
 
     print("******************return value of slack payload*********************")

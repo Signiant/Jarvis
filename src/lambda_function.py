@@ -143,7 +143,7 @@ def lambda_handler(event, context):
                 # update the dynamoDB with the new query
                 update_dynamodb.update_dynamoDB(d_table_name, query_id, retval)
         except Exception as e:
-            retval = "I'm afraid I could not run the Jarvis command with 'latest' . Use 'jarvis help' for available commands."
+            retval = "This query not in Database. Try the command again with 'latest' at end . Use 'jarvis help' for available commands."
             print(('Error: ' + format(str(e))))
 
     print("******************return value of slack payload*********************")
@@ -182,7 +182,7 @@ def post_to_slack(val, date_time_data=""):
         r = requests.post(slack_response_url, json=payload)
     else:
         payload = {
-        "text": query,
+        "text": query + date_data,
         "attachments": val,
         "response_type": "ephemeral"
         }
@@ -216,7 +216,7 @@ def send_to_slack(val, sendto_slack_channel, sender_address, date_time_data=""):
             if sendto_slack_channel:
                 # creating json payload
                 payload = {
-                    'text': sender_title + '_' + query + '_'+ "\n" + val,
+                    'text': sender_title + '_' + query + '_'+ date_data + "\n" + val,
                     'as_user': False,
                     "channel": sendto_slack_channel,
                     'mrkdwn': 'true'
@@ -237,7 +237,7 @@ def send_to_slack(val, sendto_slack_channel, sender_address, date_time_data=""):
     else:
         try:
             payload = {
-                "text": query,
+                "text": query + date_data,
                 "attachments": val,
                 "response_type": "ephemeral"
             }
@@ -252,7 +252,7 @@ def send_to_slack(val, sendto_slack_channel, sender_address, date_time_data=""):
         try:
             if sendto_slack_channel:
                 payload = {
-                    'text': sender_title +'_' + query + '_',
+                    'text': sender_title +'_' + query + '_' + date_data,
                     'as_user': False,
                     "channel": sendto_slack_channel,
                     "attachments": val,

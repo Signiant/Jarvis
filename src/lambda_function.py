@@ -3,7 +3,6 @@ import os
 import requests
 import urllib.request, urllib.parse, urllib.error
 import json
-import dateutil.tz
 
 import sys
 sys.path.append("./tools")
@@ -11,8 +10,7 @@ import update_dynamodb
 
 from datetime import datetime
 
-EST = dateutil.tz.gettz('US/Eastern')
-CURRENT_DATETIME=datetime.now(EST).strftime('%Y-%m-%d %H:%M:%S')
+CURRENT_DATETIME=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 pluginFolder = "./plugins"
 mainFile = "__init__"
@@ -178,7 +176,7 @@ def send_message_to_slack(val):
 def post_to_slack(val, date_time_data=""):
     date_data = ""
     if date_time_data:
-        date_data = "\nRetrieved on: "+date_time_data
+        date_data = "\nUpdated on: "+date_time_data+ " UTC "
 
     if isinstance(val, str):
         payload = {
@@ -198,7 +196,7 @@ def post_to_slack(val, date_time_data=""):
 def send_to_slack(val, sendto_slack_channel, sender_address, date_time_data=""):
     date_data = ""
     if date_time_data:
-        date_data = "\nRetrieved on: " + date_time_data
+        date_data = "\nUpdated on: "+date_time_data+ " UTC "
     # this gives easy access to incoming webhook
     sendto_webhook = get_incoming_webhook()
 

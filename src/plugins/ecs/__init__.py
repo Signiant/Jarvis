@@ -464,7 +464,8 @@ def information():
     jarvis ecs describe|desc <cluster> [in <region/account>] [sendto <user or channel>]
     jarvis ecs describe|desc <service> <cluster> [in <region/account>] [sendto <user or channel>]
     jarvis ecs list tasks[---<task_name_optional>] running <cluster> [in <region/account>] [sendto <user or channel>]
-    jarvis ecs compare [<cluster>] within <region> <account> with [<cluster>] within <region> <account> [sendto <user or channel>]"""
+    jarvis ecs compare [<cluster>] within <region> <account> with [<cluster>] within <region> <account> [sendto <user or channel>]
+    jarvis [Anything above] latest (This will grab latest directly from AWS instead retrieve from dynamoDB)"""
 
 
 # list the tasks in cluster

@@ -128,7 +128,7 @@ def lambda_handler(event, context):
             retval = plugin.main(text)
             # update the dynamoDB with the new query
             update_dynamodb.update_dynamoDB(d_table_name, query_id, retval,CURRENT_DATETIME)
-
+            date_time_data = CURRENT_DATETIME
         except Exception as e:
             retval = "I'm afraid I did not understand that command. Use 'jarvis help' for available commands."
             print(('Error: ' + format(str(e))))

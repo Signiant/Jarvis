@@ -91,9 +91,11 @@ def lambda_handler(event, context):
     print(("LOG: The request is: " + str(text)))
     print(("LOG: The requesting user is: " + param_map['user_name']))
     get_latest = False
+    post_slack = True
     date_time_data = ""
 
     # extract send to slack channel from args
+    # keywords section
     sendto_data = None
     if "sendto" in text:
         sendto_data = [_f for _f in text[text.index("sendto") + 1:] if _f]
@@ -103,8 +105,8 @@ def lambda_handler(event, context):
         get_latest = True
         text = text[:text.index("latest")]
 
-    if param_map["u'token"] != incoming_token:  # Check for a valid Slack token
-        retval = 'invalid incoming Slack token'
+    if "nopostslack" in text:
+        post_slack = False
 
     elif text[0] == 'help':
         if len(text) > 1:
@@ -120,7 +122,7 @@ def lambda_handler(event, context):
                 plugins = plugins + "\n" + aPlugin["name"] + ": " + loadPlugin(aPlugin['name']).about()
 
             retval = 'You can use the following commands: ' + plugins + '.'
-    elif get_latest:
+    elif get_latest and text[0] != 'help':
         # get latest option
         try:
             plugin = loadPlugin(text[0])
@@ -155,10 +157,12 @@ def lambda_handler(event, context):
     print("*********************************************************************")
 
     # if sendto: is in args then send jarvis message to slack channel in args
-    if sendto_data:
-        send_to_slack(retval, sendto_data[0], param_map['user_name'],date_time_data)
-    else:
-        post_to_slack(retval, date_time_data)
+    if post_slack:
+        if sendto_data:
+            send_to_slack(retval, sendto_data[0], param_map['user_name'],date_time_data)
+        else:
+            post_to_slack(retval, date_time_data)
+
 
 
 # function to send processing request message

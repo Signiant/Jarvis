@@ -157,13 +157,11 @@ def lambda_handler(event, context):
     print("*********************************************************************")
 
     # if sendto: is in args then send jarvis message to slack channel in args
-    if not post_slack:
-        retval = ""
-
-    if sendto_data:
-        send_to_slack(retval, sendto_data[0], param_map['user_name'],date_time_data)
-    else:
-        post_to_slack(retval, date_time_data)
+    if post_slack:
+        if sendto_data:
+            send_to_slack(retval, sendto_data[0], param_map['user_name'],date_time_data)
+        else:
+            post_to_slack(retval, date_time_data)
 
 
 

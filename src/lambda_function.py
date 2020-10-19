@@ -105,8 +105,9 @@ def lambda_handler(event, context):
         get_latest = True
         text = text[:text.index("latest")]
 
-    if "nopostslack" in text:
-        post_slack = False
+        if "nopostslack" in text:
+            post_slack = False
+            text = text[:text.index("nopostslack")]
 
     elif text[0] == 'help':
         if len(text) > 1:

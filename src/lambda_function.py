@@ -109,6 +109,8 @@ def lambda_handler(event, context):
             post_slack = False
             text = text[:text.index("nopostslack")]
 
+    if param_map["u'token"] != incoming_token:  # Check for a valid Slack token
+        retval = 'invalid incoming Slack token'
     elif text[0] == 'help':
         if len(text) > 1:
             try:
@@ -163,7 +165,6 @@ def lambda_handler(event, context):
             send_to_slack(retval, sendto_data[0], param_map['user_name'],date_time_data)
         else:
             post_to_slack(retval, date_time_data)
-
 
 
 # function to send processing request message

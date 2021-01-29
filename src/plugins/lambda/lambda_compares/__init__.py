@@ -353,7 +353,7 @@ def comp_strings_charnum(string1, string2):
 
 def lambda_compare_master_team(t_array, m_array):
     """
-    compare master to teams
+    compare master(prod) to teams(compared dev)
     :param t_array: the version of services in team branch
     :param m_array: the version of services in prod branch
     :param cached_array: jenkin_data from superjenkin

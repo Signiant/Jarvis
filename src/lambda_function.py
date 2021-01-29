@@ -3,6 +3,7 @@ import os
 import requests
 import urllib.request, urllib.parse, urllib.error
 import json
+import logging
 
 import sys
 sys.path.append("./tools")
@@ -150,9 +151,10 @@ def lambda_handler(event, context):
             retval = "This query not in Database. Try the command again with 'latest' at end . Use 'jarvis help' for available commands."
             print(('Error: ' + format(str(e))))
 
-    print("******************return value of slack payload*********************")
-    print(retval)
-    print("*********************************************************************")
+    # change logging.debug to print for local machine debbuging
+    logging.debug("******************return value of slack payload*********************")
+    logging.debug(retval)
+    logging.debug("*********************************************************************")
 
     # if sendto: is in args then send jarvis message to slack channel in args
     if sendto_data:

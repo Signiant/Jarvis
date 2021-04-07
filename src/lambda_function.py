@@ -104,6 +104,7 @@ def lambda_handler(event, context):
         get_latest = True
         text = text[:text.index("latest")]
 
+    print("parammap " + str(param_map))
     if param_map["u'token"] != incoming_token:  # Check for a valid Slack token
         retval = 'invalid incoming Slack token'
 

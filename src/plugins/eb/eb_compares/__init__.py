@@ -111,11 +111,13 @@ def eb_check_versions(region_name, env_array, role_arn, team_name):
 
                     if ga_enabled:
                         if load_balancer_dns:
-                            if env['EndpointURL'].lower() in load_balancer_dns.lower() and env['Health'] == "Green":
+                            if env['EndpointURL'].lower() in load_balancer_dns.lower():
+                                if env['Health'] == "Green" or env['Health'] == "Yellow" or env['Health'] == "Red":
                                     appversions.append(c_appversion)
                     else:
                         if activeLoadBalancer:
-                            if env['EndpointURL'].lower() in activeLoadBalancer.lower() and env['Health'] == "Green":
+                            if env['EndpointURL'].lower() in activeLoadBalancer.lower():
+                                if env['Health'] == "Green" or env['Health'] == "Yellow" or env['Health'] == "Red":
                                     appversions.append(c_appversion)
 
 

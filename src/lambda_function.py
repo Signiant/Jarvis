@@ -109,7 +109,9 @@ def lambda_handler(event, context):
     print("*********************************************************************")
 
     # if sendto: is in args then send jarvis message to slack channel in args
-    if sendto_data:
+    if sendto_data == "nobody":
+        print('Not sending report')
+    elif sendto_data:
         send_to_slack(retval, sendto_data[0], param_map['user_name'])
     else:
         post_to_slack(retval)

@@ -203,7 +203,6 @@ def main(text):
                 if config:
                     master_data = get_in_ecs_compare_data(config, master_args, master_args_eval)
                     team_data = get_in_ecs_compare_data(config, team_args, team_args_eval)
-                    print(team_data)
                 else:
                     return "Config file was not loaded"
 
@@ -465,7 +464,8 @@ def information():
     jarvis ecs describe|desc <cluster> [in <region/account>] [sendto <user or channel>]
     jarvis ecs describe|desc <service> <cluster> [in <region/account>] [sendto <user or channel>]
     jarvis ecs list tasks[---<task_name_optional>] running <cluster> [in <region/account>] [sendto <user or channel>]
-    jarvis ecs compare [<cluster>] within <region> <account> with [<cluster>] within <region> <account> [sendto <user or channel>]"""
+    jarvis ecs compare [<cluster>] within <region> <account> with [<cluster>] within <region> <account> [sendto <user or channel>]
+    jarvis [Anything above] latest (This will grab latest directly from AWS instead retrieve from dynamoDB)"""
 
 
 # list the tasks in cluster
@@ -560,6 +560,7 @@ def get_in_ecs_compare_data(config, args, args_eval):
                 if the_region == result['region_name']:
                     if result['cluster_name'] == None:
                         result['cluster_name'] = account['Clusters'][the_region]['cluster_list']
+                    result['task_definition_name'] = account['Clusters'][the_region]['task_only_service']
                     result['environment_code_name'] = account['Clusters'][the_region]['environment_code_name']
                     result['service_exclude_list'] = config['ecs']['service_exclude_list']
                     result['team_name'] = account['Clusters'][the_region]['team_name']
@@ -570,6 +571,7 @@ def get_in_ecs_compare_data(config, args, args_eval):
                     if result['account'] == the_clusters['Clusters'][the_region]['team_name']:
                         if result['cluster_name'] == None:
                             result['cluster_name'] = the_clusters['Clusters'][the_region]['cluster_list']
+                        result['task_definition_name'] = account['Clusters'][the_region]['task_only_service']
                         result['environment_code_name'] = the_clusters['Clusters'][the_region]['environment_code_name']
                         result['service_exclude_list'] = config['ecs']['service_exclude_list']
                         result['RoleArn'] = None

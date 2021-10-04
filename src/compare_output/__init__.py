@@ -39,8 +39,8 @@ def format_the_time(thetime):
 
 # compress string is larger than 28 chars
 def shorten_input(thestring):
-    if len(thestring) > 28:
-        thestring = thestring[:25]+"..."
+    if len(thestring) > 33:
+        thestring = thestring[:33]+"..."
         return thestring
     else:
         return thestring

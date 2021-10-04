@@ -5,11 +5,10 @@ import time
 import requests
 
 
-
 # get ecs data from boto call
-def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, env_code_name, role_arn):
+def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, env_code_name, role_arn, task_definition_list):
 
-    service_versions = []
+    service_versions_list = []
     cluster_list = []
     awsKeyId = None
     awsSecretKey = None
@@ -22,15 +21,17 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
     else:
         cluster_list.append(cluster_name)
 
+    sts_client = boto3.client('sts')
+    if role_arn:
+        assumedRole = sts_client.assume_role(RoleArn=role_arn, RoleSessionName="AssumedRole")
+        awsKeyId = assumedRole['Credentials']['AccessKeyId']
+        awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
+        awsSessionToken = assumedRole['Credentials']['SessionToken']
+    session = boto3.session.Session(aws_access_key_id=awsKeyId, aws_secret_access_key=awsSecretKey,
+                                    aws_session_token=awsSessionToken)
+
     for cluster in cluster_list:
         try:
-            sts_client = boto3.client('sts')
-            if role_arn:
-                assumedRole = sts_client.assume_role(RoleArn=role_arn, RoleSessionName="AssumedRole")
-                awsKeyId = assumedRole['Credentials']['AccessKeyId']
-                awsSecretKey = assumedRole['Credentials']['SecretAccessKey']
-                awsSessionToken = assumedRole['Credentials']['SessionToken']
-            session = boto3.session.Session(aws_access_key_id=awsKeyId, aws_secret_access_key=awsSecretKey, aws_session_token=awsSessionToken)
             client = session.client("ecs", region_name=region_name)
             if client:
                 service_paginator = client.get_paginator('list_services')
@@ -42,54 +43,97 @@ def ecs_check_versions(profile_name, region_name, cluster_name, slack_channel, e
 
         try:
             for service in service_iterator:
+                # print(service)
                 # Get the service info for each batch
                 services_descriptions = client.describe_services(cluster=cluster, services=service['serviceArns'])
                 for service_desc in services_descriptions['services']:
+                    # print(service_desc['taskDefinition'])
                     image = client.describe_task_definition(taskDefinition=service_desc['taskDefinition'])
-
-                    # getting ecs service version and name
-                    version_output = image['taskDefinition']['containerDefinitions'][0]['image']
-                    version_parsed = version_output.split("/")[-1]
-                    service_dot_index = version_parsed.find(':')
-
-                    service_version_prefix = version_parsed[0:service_dot_index]
-                    service_version_ending = version_parsed[(service_dot_index + 1):]
-
-                    # detailed ecs service
-                    team_service_definition = image['taskDefinition']['family']
-
-                    # this section of boto3 code slows down jarvis significantly
-                    # because it calls on cloudformation describe_stack for every microservices
-                    service_stack_name = re.split('-[A-Za-z]*Task-', team_service_definition)[0]
-                    # print(service_stack_name)
-                    cf_client = session.client("cloudformation", region_name=region_name)
                     try:
-                        stack = cf_client.describe_stacks(StackName=service_stack_name)
+                        service_versions_list = get_versions_from_image(session, region_name, image, slack_channel,
+                                                                        env_code_name, service_versions_list)
                     except Exception as e:
-                        print(('Error: {0}. No stack found for {0}'.format(e, service_stack_name)))
+                        print(("Error: (" + str(e) + ")"))
                         continue
-                    build_date = ""
-
-                    for tag in stack['Stacks'][0]['Tags']:
-                        if tag['Key'] == 'bitbucket-build-date':
-                            build_date = tag['Value']
-                            break
-
-                    # version_parsed, team_service_name, region_name
-                    if len(version_output) > 1:
-                        c_service = {"version": service_version_ending,
-                                     "servicename": service_version_prefix,
-                                     "service_definition": team_service_definition,
-                                     "regionname": region_name,
-                                     "slackchannel": slack_channel,
-                                     "environment_code_name": env_code_name,
-                                     "build_date": build_date}
-                        service_versions.append(c_service)
 
         except Exception as e:
             print(("Error obtaining paginated services for " + str(cluster) + " (" + str(e) + ")"))
 
-    return service_versions
+    if task_definition_list:
+        try:
+            # image = client.describe_task_definition(taskDefinition="transfer-service-columbia")
+            cf_client = session.client("cloudformation", region_name=region_name)
+            print(task_definition_list)
+            for task_definition_name in task_definition_list:
+                stack_resource = cf_client.describe_stack_resource(StackName=task_definition_name, LogicalResourceId="Task")
+                print("image")
+                print(stack_resource)
+                task_definition = stack_resource['StackResourceDetail']['PhysicalResourceId']
+                image = client.describe_task_definition(taskDefinition=task_definition)
+                print(image)
+                try:
+                    service_versions_list = get_versions_from_image(session, region_name, image, slack_channel,
+                                                                    env_code_name, service_versions_list)
+                except Exception as e:
+                    print(("Error: (" + str(e) + ")"))
+                    continue
+
+        except Exception as e:
+            print(("Error in " + str(cluster) + " (" + str(e) + ")"))
+
+    print("service {0}".format(service_versions_list))
+    return service_versions_list
+
+
+def get_versions_from_image(session,region_name,image, slack_channel, env_code_name, service_versions_list):
+
+    """
+    Retrieve required information from a image in task_defintion and put them into a predefined list.
+    :param session:
+    :param region_name:
+    :param image:
+    :return:
+    """
+
+    # getting ecs service version and name
+    version_output = image['taskDefinition']['containerDefinitions'][0]['image']
+    version_parsed = version_output.split("/")[-1]
+    service_dot_index = version_parsed.find(':')
+
+    service_version_prefix = version_parsed[0:service_dot_index]
+    service_version_ending = version_parsed[(service_dot_index + 1):]
+
+    # detailed ecs service
+    team_service_definition = image['taskDefinition']['family']
+
+    # this section of boto3 code slows down jarvis significantly
+    # because it calls on cloudformation describe_stack for every microservices
+    service_stack_name = re.split('-[A-Za-z]*Task-', team_service_definition)[0]
+    # print(service_stack_name)
+    cf_client = session.client("cloudformation", region_name=region_name)
+    try:
+        stack = cf_client.describe_stacks(StackName=service_stack_name)
+    except Exception as e:
+        print(('Error: {0}. No stack found for {0}'.format(e, service_stack_name)))
+    build_date = ""
+
+    for tag in stack['Stacks'][0]['Tags']:
+        if tag['Key'] == 'bitbucket-build-date':
+            build_date = tag['Value']
+            break
+
+    # version_parsed, team_service_name, region_name
+    if len(version_output) > 1:
+        c_service = {"version": service_version_ending,
+                     "servicename": service_version_prefix,
+                     "service_definition": team_service_definition,
+                     "regionname": region_name,
+                     "slackchannel": slack_channel,
+                     "environment_code_name": env_code_name,
+                     "build_date": build_date}
+        service_versions_list.append(c_service)
+
+    return service_versions_list
 
 
 def get_bb_credential():
@@ -117,16 +161,20 @@ def compare_bb_commit_parents(repo_name,commit_hash, compare_hash):
     """
     api_token = get_bb_credential()
     bb_api_url="https://api.bitbucket.org/2.0/repositories/signiant/{0}/commit/{1}".format(repo_name, commit_hash)
-
     headers = dict()
     headers['Authorization'] = "Bearer {0}".format(api_token)
     headers['Content-Type'] = 'application/json'
-    api_response = requests.get(bb_api_url, headers=headers).json()
+    api_response = requests.get(bb_api_url, headers=headers)
 
-    for parent in api_response['parents']:
-        if parent['hash'][0:7] == compare_hash:
-            return True
+    if api_response.status_code == 200:
+        api_response = api_response.json()
+        for parent in api_response['parents']:
+            if parent['hash'][0:7] == compare_hash:
+                return True
+        else:
+            return False
     else:
+        # if api to specific repo cannot be verified set it to false at moment
         return False
 
 
@@ -194,6 +242,11 @@ def compare_environment(team_env, master_env, jenkins_build_terms ):
     service_name = team_env['servicename'].replace('_','-')
     team_branch_name = team_env['version'].replace('_','-').split('-')[1:-1]
     master_branch_name = master_env['version'].replace('_','-').split('-')[1:-1]
+
+    # replace signiant-installer-service dash to underscore
+    # if there are more name changes in the future a seperate functions can be created
+    if service_name == "signiant-installer-service":
+        service_name = service_name.replace('-','_')
 
     if len(team_hash) == 7 and len(master_hash) == 7:
         if team_hash == master_hash:
@@ -351,7 +404,7 @@ def comp_strings_charnum(string1, string2):
 def ecs_compare_master_team(tkey, m_array, cached_array, jenkins_build_tags, excluded_services=None):
     """
     compare master to teams
-    :param tkey:
+    :param tkey: the version of services in team branch
     :param m_array: the version of services in prod branch
     :param cached_array: jenkin_data from superjenkin
     :param jenkins_build_tags:
@@ -498,7 +551,7 @@ def main_ecs_check_versions(master_array, team_array, jenkins_build_tags, superj
                                             master_array['cluster_name'],
                                             "",
                                             master_array['environment_code_name'],
-                                            master_array['RoleArn'])
+                                            master_array['RoleArn'],master_array['task_definition_name'])
 
     if master_plugin_data:
         masterdata[master_array['environment_code_name']] = master_plugin_data
@@ -506,7 +559,7 @@ def main_ecs_check_versions(master_array, team_array, jenkins_build_tags, superj
         team_plugin_data = ecs_check_versions(team_array['account'], team_array['region_name'],
                                               team_array['cluster_name'], "",
                                               team_array['environment_code_name'],
-                                              team_array['RoleArn'])
+                                              team_array['RoleArn'],team_array['task_definition_name'])
 
         compared_data = ecs_compare_master_team(team_plugin_data,
                                                 masterdata,
